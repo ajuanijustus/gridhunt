@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use GridHunt, please cite it as below."
+title: "GridHunt: A Customizable Heterogeneous Predator-Prey Suite for Mixed-Motive MARL and Human-Agent Teaming"
+type: software
+authors:
+  - given-names: "Aju Ani"
+    family-names: "Justus"
+    affiliation: "University of Birmingham"
+  - given-names: "Chris"
+    family-names: "Baber"
+    affiliation: "University of Birmingham"
+  - given-names: "Aditya"
+    family-names: "Acharya"
+    affiliation: "University of Birmingham"
+  - given-names: "Leonardo"
+    family-names: "Stella"
+    affiliation: "University of Birmingham"
+version: 1.0.0
+license: MIT
+repository-code: "https://github.com/ajuanijustus/gridhunt"
+keywords:
+  - multi-agent reinforcement learning
+  - human-agent teaming
+  - pettingzoo
+  - predator-prey

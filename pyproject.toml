@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gridhunt"
+dynamic = ["version"]
+description = "Heterogeneous, mixed-motive predator-prey environments for multi-agent RL and human-agent teaming (PettingZoo API)"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [
+    { name = "Aju Ani Justus" },
+    { name = "Chris Baber" },
+    { name = "Aditya Acharya" },
+    { name = "Leonardo Stella" },
+]
+keywords = ["reinforcement-learning", "multi-agent", "pettingzoo", "gridworld", "human-agent-teaming", "benchmark"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.24",
+    "gymnasium>=0.28.1",
+    "pettingzoo>=1.24.2",
+]
+
+[project.optional-dependencies]
+# Pygame window, rgb_array frames and the interactive GUI
+render = ["pygame-ce>=2.5", "pygame-gui>=0.6.14", "pillow>=10"]
+# Human-agent teaming studies (session runner, logging, questionnaires)
+hat = ["gridhunt[render]"]
+# Baselines and analysis in benchmark/ (not part of the installed package)
+benchmark = ["torch>=2.3", "matplotlib>=3.8", "scipy>=1.11"]
+dev = ["gridhunt[render]", "pytest>=7.4", "ruff>=0.6"]
+docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.25"]
+
+[project.urls]
+Homepage = "https://github.com/ajuanijustus/gridhunt"
+Repository = "https://github.com/ajuanijustus/gridhunt"
+Issues = "https://github.com/ajuanijustus/gridhunt/issues"
+Changelog = "https://github.com/ajuanijustus/gridhunt/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/gridhunt/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/gridhunt", "tests", "README.md", "LICENSE", "CHANGELOG.md", "CITATION.cff"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gridhunt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "benchmark/tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"

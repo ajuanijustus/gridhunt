@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv*/
+
+# Tools
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.idea/
+.vscode/
+.DS_Store
+**/.ipynb_checkpoints/
+
+# Docs build
+site/
+
+# Benchmark outputs: raw runs and checkpoints are large and live on Zenodo.
+# The aggregated summary (benchmark/results/summary) and reference_scores.csv are tracked.
+benchmark/results/*
+!benchmark/results/summary/
+!benchmark/results/reference_scores.csv
+*.pt
+jobs.txt
+pilot_jobs.txt
+slurm_logs/
+
+# Human-agent teaming session logs (may contain participant data)
+hat_logs/
