@@ -27,6 +27,10 @@ First public release.
   human-on-the-loop policy delegation study.
 - `gridhunt.policies`: the scripted policies, usable as teammates; `GreedyPolicy` can be limited
   to some prey types and told to ignore hidden information (`prey_types`, `avoid_harmful`).
+- `gridhunt.zoo`: the benchmark's trained IPPO, MAPPO and HAPPO teams (median and best seed per
+  scenario) as numpy-only policies, downloaded on first use, checked against SHA-256 hashes and
+  cached. A team plays on its own (`team.act(observations)`) or as teammates in a `HumanSession`,
+  and `team.make_env()` rebuilds the exact scenario it was trained in.
 - `env.render()` and `env.close()`, a working `render_mode="rgb_array"`, and
   `gui_config["vision_mask"]` to choose whose view the renderer shows.
 - `env.set_entities()` and `env.set_prey()` to change human-only cues and prey settings between

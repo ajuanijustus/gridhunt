@@ -122,6 +122,22 @@ command below runs from the repository root.
 
 Each run records the git commit, library versions and SLURM job id in its `final.json`.
 
+## Pretrained teams (gridhunt.zoo)
+
+`export_zoo.py` turns finished runs into the numpy models that `gridhunt.zoo` downloads. For each
+scenario and algorithm it exports the run with the median final score and the best run, and
+checks every file against its PyTorch model: equal logits on observations from real episodes,
+greedy actions that reproduce the greedy evaluation returns in `final.json` episode by episode,
+and a sampled mean within 4 standard errors of the recorded score.
+
+```bash
+python benchmark/export_zoo.py --runs benchmark/results/marl --out zoo_export
+sbatch benchmark/slurm/export_zoo.sh benchmark/results/marl zoo_export   # on BlueBEAR
+```
+
+It writes the `.npz` files, `registry.json` (copied to `src/gridhunt/zoo/registry.json`) and
+`VERIFICATION.md`. The `.npz` files are published as assets of the `zoo-v1` GitHub release.
+
 ## Earlier RLlib pipeline
 
 The earlier preprint trained its baselines with RLlib, using scripts that are not part of this

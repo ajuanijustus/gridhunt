@@ -64,6 +64,17 @@ with session:
         session.ask(Questionnaire([Likert("trust", "I trusted my AI teammate.")]))
 ```
 
+Teammates can also be the trained benchmark agents, which run on numpy alone (no PyTorch):
+
+```python
+from gridhunt import zoo
+
+team = zoo.load("toxic_stag", "mappo", rank="best")   # downloaded once, then cached
+env = team.make_env()                                 # the scenario as it was trained
+session = HumanSession(env, humans={"predator_0": ARROW_KEYS},
+                       teammates={"predator_1": team, "predator_2": team})
+```
+
 [`examples/hitl_play_with_ai.py`](examples/hitl_play_with_ai.py) is a complete version, and
 [`examples/hotl_policy_delegation.py`](examples/hotl_policy_delegation.py) is a human-on-the-loop
 study in which the participant chooses which AI team plays from cues only they can see. Both run
