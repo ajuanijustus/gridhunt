@@ -20,6 +20,8 @@ class ToxicStagHuntScenario(GridHunt):
     last-step rewards of all agents.
     """
 
+    observation_modes = GridHunt.observation_modes + ("toxic",)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._observation_spaces = {}

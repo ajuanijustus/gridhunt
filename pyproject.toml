@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "numpy>=1.24",
+    "numpy>=1.26",
     "gymnasium>=0.28.1",
     "pettingzoo>=1.24.2",
 ]
@@ -60,7 +60,17 @@ packages = ["src/gridhunt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "benchmark/tests"]
+filterwarnings = [
+    # Raised when pettingzoo.test imports PettingZoo's own bundled environments
+    "ignore:The old environment creation API has been deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+# B019: observation_space/action_space are cached per env, as PettingZoo expects the same object
+# on every call. B905: zip(strict=) would change behaviour of existing benchmark code.
+ignore = ["B019", "B905"]

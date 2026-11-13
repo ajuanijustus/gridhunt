@@ -25,7 +25,9 @@ Render tests run headless with `SDL_VIDEODRIVER=dummy`.
 
 - **Environment dynamics are versioned.** Any change to an environment's transitions, rewards or
   observations must bump its ID suffix (for example `-v0` to `-v1`) and be noted in
-  `CHANGELOG.md`, so published results stay comparable.
+  `CHANGELOG.md`, so published results stay comparable. `tests/test_regression.py` replays
+  recorded trajectories of every environment and fails on any such change; record references
+  for a new version with `tests/regression/record_reference.py`, never to make the test pass.
 - Use the environment's own seeded RNG (`self._np_rng`), never the global `random` or
   `np.random` state.
 - New environments should pass `pettingzoo.test.parallel_api_test` and `parallel_seed_test`;

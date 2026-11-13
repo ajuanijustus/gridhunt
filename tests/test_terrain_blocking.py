@@ -1,11 +1,12 @@
 import pytest
+
 import gridhunt
 
 
 @pytest.fixture
 def env_pig():
-    """PIG scenario with impassable obstacles."""
-    return gridhunt.make("GridHunt-PIG-v0")
+    """Pig chase scenario with impassable obstacles."""
+    return gridhunt.make("GridHunt-PigChase-v0")
 
 
 @pytest.fixture
@@ -27,7 +28,7 @@ def test_impassable_terrain_blocks_movement(env_pig):
     predator = env_pig.predators["predator_0"]
 
     obstacles = env_pig.terrain_map.get("obstacle", set())
-    assert len(obstacles) > 0, "PIG should have obstacles"
+    assert len(obstacles) > 0, "Pig chase should have obstacles"
 
     test_obstacle = list(obstacles)[0]
     adjacent_to_obstacle = (test_obstacle[0] - 1, test_obstacle[1])
@@ -46,7 +47,7 @@ def test_impassable_terrain_blocks_movement(env_pig):
 
         assert (
             predator.position == adjacent_to_obstacle
-        ), f"Agent should be blocked by impassable terrain"
+        ), "Agent should be blocked by impassable terrain"
 
 
 def test_terrain_passability_probability():
@@ -81,7 +82,6 @@ def test_restricted_terrain_blocks_predator(env_land_and_sea):
     land_pos = list(land_positions)[0]
 
     sea_predator.position = sea_pos
-    initial_pos = sea_predator.position
 
     if land_pos[0] > sea_pos[0]:
         action = 4  # RIGHT
@@ -101,7 +101,7 @@ def test_terrain_immune_ignores_passability(env_military):
 
     uav = env_military.predators["uav_0"]
 
-    assert uav.immune_to_terrain == True, "UAV should be immune to terrain"
+    assert uav.immune_to_terrain is True, "UAV should be immune to terrain"
 
 
 def test_predator_cannot_cross_terrain_restriction(env_land_and_sea):
@@ -111,7 +111,6 @@ def test_predator_cannot_cross_terrain_restriction(env_land_and_sea):
     land_predator = env_land_and_sea.predators["land_predator"]
     sea_positions = env_land_and_sea.terrain_map.get("sea", set())
 
-    sea_pos = list(sea_positions)[0]
     land_positions = env_land_and_sea.terrain_map.get("land", set())
     land_pos = list(land_positions)[0]
 

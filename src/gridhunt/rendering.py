@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+
 import numpy as np
 import pygame
 
@@ -14,8 +14,9 @@ except ImportError:  # pragma: no cover
         stacklevel=2,
     )
     pygame_gui = None
-from PIL import Image
 import io
+
+from PIL import Image
 
 
 class Renderer:
@@ -44,7 +45,7 @@ class Renderer:
     # Grid rendering
     GRID_BOUNDARY_BUFFER = 1
 
-    def __init__(self, env, gui_config: Optional[dict] = None) -> None:
+    def __init__(self, env, gui_config: dict | None = None) -> None:
         """Initialize renderer state."""
         self.env = env
         self.gui_config = gui_config or {}

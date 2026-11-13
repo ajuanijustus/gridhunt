@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 import gridhunt
 
 
@@ -10,7 +11,7 @@ def env_classic():
 
 @pytest.fixture
 def env_pig():
-    return gridhunt.make("GridHunt-PIG-v0")
+    return gridhunt.make("GridHunt-PigChase-v0")
 
 
 def test_hare_respawns_on_valid_coordinate(env_classic):

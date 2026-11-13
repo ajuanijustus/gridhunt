@@ -1,4 +1,8 @@
+import subprocess
+import sys
+
 import pytest
+
 import gridhunt
 
 
@@ -31,7 +35,7 @@ def test_different_seeds_produce_different_positions(env):
 
 
 def test_fixed_position_parameters_are_preserved():
-    env = gridhunt.make("GridHunt-PIG-v0")
+    env = gridhunt.make("GridHunt-PigChase-v0")
     env.reset(seed=42)
     first = _positions(env)
     env.reset(seed=99)
@@ -78,3 +82,24 @@ def test_reset_counters():
     env.reset()
     assert env.step_count == 0
     assert env.score == 0
+
+
+def test_gridhunt_never_touches_the_global_random_state():
+    # Run in a fresh interpreter: the registered scenarios are built when gridhunt is imported
+    script = """
+import random
+import numpy as np
+np.random.seed(123)
+random.seed(123)
+numpy_state, python_state = np.random.get_state()[1].copy(), random.getstate()
+import gridhunt
+for env_id in gridhunt.list_envs():
+    env = gridhunt.make(env_id)
+    env.reset(seed=0)
+    for _ in range(20):
+        env.step({agent: 1 for agent in env.agents})
+    env.reset()
+assert (np.random.get_state()[1] == numpy_state).all(), "global numpy RNG was used"
+assert random.getstate() == python_state, "global random module was used"
+"""
+    subprocess.run([sys.executable, "-c", script], check=True)

@@ -3,11 +3,13 @@
 import sys
 from pathlib import Path
 
-import gridhunt  # noqa: F401
 import pytest
+
+import gridhunt  # noqa: F401
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from protocol import SCENARIOS, make_env  # noqa: E402
+
 
 @pytest.mark.parametrize("scenario", sorted(SCENARIOS))
 def test_protocol_scenarios_build(scenario):

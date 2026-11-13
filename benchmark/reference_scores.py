@@ -18,7 +18,6 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
-
 from protocol import EVAL_SEED_OFFSET, SCENARIOS, make_env
 from reference_policies import GreedyPolicy, RandomPolicy, run_episode
 

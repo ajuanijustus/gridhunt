@@ -37,6 +37,11 @@ while env.agents:
     obs, rewards, terminations, truncations, infos = env.step(actions)
 ```
 
+`gridhunt.list_envs()` lists the registered environments. Any scenario setting can be overridden,
+for example `gridhunt.make("GridHunt-ToxicStag-v0", max_steps=200, reward_mode="team")`. With
+PettingZoo 1.27 or later, `import gridhunt` also registers every environment with PettingZoo, so
+`pettingzoo.make("parallel", "GridHunt-ClassicStag-v0")` works too.
+
 ## Scenarios
 
 | Environment | Grid | Agents | Challenge |
@@ -46,7 +51,7 @@ while env.agents:
 | `GridHunt-Specialists-v0` | 10×10 | 2 | A fast scout with full vision and a strong but short-sighted bruiser |
 | `GridHunt-Military-v0` | 10×10 | 2 | A UAV that can only scout guides a slow ground vehicle through terrain |
 | `GridHunt-Raid-v0` | 12×12 | 3 | Targets of rising value need more raiders and may be trapped |
-| `GridHunt-PIG-v0` | 9×9 | 2 | Two predators must reach the pig together through a maze |
+| `GridHunt-PigChase-v0` | 9×9 | 2 | Two predators must reach the pig together through a maze |
 | `GridHunt-LandAndSea-v0` | 10×10 | 2 | A boat and a land unit, each confined to its terrain |
 | `GridHunt-Swarm-v0` | 23×23 | 10 | Many predators, shared reward and overcrowding penalties |
 

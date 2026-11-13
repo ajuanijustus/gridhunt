@@ -4,8 +4,9 @@ Tests for proper handling of simultaneous actions and interactions.
 Based on PettingZoo best practices.
 """
 
-import pytest
 import numpy as np
+import pytest
+
 import gridhunt
 
 SCENARIOS = [

@@ -7,7 +7,6 @@ randomness drawn at import time or from global RNGs; the cross-process test runs
 the same seeded rollout in fresh interpreters and compares the results.
 """
 
-import hashlib
 import subprocess
 import sys
 import warnings

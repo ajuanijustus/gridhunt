@@ -52,7 +52,10 @@ class PPOConfig:
 # Building blocks
 # ---------------------------------------------------------------------------
 
-def layer_init(layer, gain=np.sqrt(2)):
+_SQRT2 = np.sqrt(2)
+
+
+def layer_init(layer, gain=_SQRT2):
     nn.init.orthogonal_(layer.weight, gain)
     nn.init.zeros_(layer.bias)
     return layer

@@ -3,9 +3,10 @@ Test observation shape consistency across all observation modes and scenarios.
 Verifies that observation_space().contains(obs) returns True for all observations.
 """
 
-import pytest
-import gridhunt
 import numpy as np
+import pytest
+
+import gridhunt
 
 SCENARIOS = [
     "GridHunt-ClassicStag-v0",
@@ -14,7 +15,7 @@ SCENARIOS = [
     "GridHunt-Swarm-v0",
     "GridHunt-Military-v0",
     "GridHunt-Raid-v0",
-    "GridHunt-PIG-v0",
+    "GridHunt-PigChase-v0",
     "GridHunt-LandAndSea-v0",
 ]
 
@@ -104,25 +105,22 @@ def test_observation_shape_stability_after_captures():
     for agent_id in env.agents:
         assert (
             obs1[agent_id].shape == obs2[agent_id].shape
-        ), f"Observation shape changed after first capture"
+        ), "Observation shape changed after first capture"
         assert (
             obs1[agent_id].shape == obs3[agent_id].shape
-        ), f"Observation shape changed after second capture"
+        ), "Observation shape changed after second capture"
         assert obs_space.contains(
             obs2[agent_id]
-        ), f"Observation after first capture not in observation_space"
+        ), "Observation after first capture not in observation_space"
         assert obs_space.contains(
             obs3[agent_id]
-        ), f"Observation after second capture not in observation_space"
+        ), "Observation after second capture not in observation_space"
 
 
 def test_observation_contains_sentinel_for_captured_prey(scenario="GridHunt-Raid-v0"):
     """Captured non-respawning prey should be encoded as sentinel [-1, -1] in 'coords' mode."""
     env = gridhunt.make(scenario, observation_mode="coords")
     obs, info = env.reset()
-
-    num_prey = len(env.prey_ids)
-    num_predators = len(env.predator_ids)
 
     # Capture barn (first building)
     barn_pos = env.prey["barn_0"].position
@@ -140,7 +138,7 @@ def test_observation_contains_sentinel_for_captured_prey(scenario="GridHunt-Raid
     obs_space = env.observation_space(env.agents[0])
     assert obs_space.contains(
         agent_obs
-    ), f"Observation with captured prey not in observation_space"
+    ), "Observation with captured prey not in observation_space"
 
 
 def test_observation_dtype_consistency():

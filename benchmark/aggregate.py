@@ -34,9 +34,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-
-from protocol import MAIN_SCENARIOS, SCENARIOS  # noqa: E402
 import reference_scores  # noqa: E402
+from protocol import MAIN_SCENARIOS, SCENARIOS  # noqa: E402
 
 ALGORITHMS = ("ippo", "mappo", "happo")
 LABELS = {"ippo": "IPPO", "mappo": "MAPPO", "happo": "HAPPO"}
@@ -346,7 +345,7 @@ def plot_curves(out, runs, references, reps, rng):
                 ax.axhline(value, color=TEXT_SECONDARY, linewidth=0.8, zorder=0)
                 ax.annotate(name, (1.0, value), xycoords=("axes fraction", "data"), xytext=(4, 0),
                             textcoords="offset points", va="center", fontsize=8, color=TEXT_SECONDARY)
-        for value, algo, step in ends:  # direct labels in text colour
+        for value, _algo, step in ends:  # direct labels in text colour
             ax.annotate(f"{value:.0f}", (step, value), xytext=(6, 0), textcoords="offset points",
                         va="center", fontsize=8, color=TEXT)
         ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(_steps_formatter))

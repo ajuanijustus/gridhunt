@@ -3,8 +3,9 @@
 __version__ = "1.0.0.dev0"
 
 import copy
+import functools
 
-from .agents import Building, Entity, Hare, Pig, Predator, Stag, ToxicStag
+from .agents import Building, Entity, Hare, Pig, Predator, Prey, Stag, Terrain, ToxicStag
 from .assets import (
     BARN_SPRITE,
     BIRD_SPRITE,
@@ -17,13 +18,14 @@ from .assets import (
     SCOUT_SPRITE,
     VEHICLE_SPRITE,
 )
-from .wrappers import CommunicationWrapper
+from .core import GridHunt
 from .scenarios import (
     PigChaseScenario,
     RaidScenario,
     StagHuntScenario,
     ToxicStagHuntScenario,
 )
+from .wrappers import CommunicationWrapper
 
 CLASSIC_STAG_V0 = {
     "scenario_class": StagHuntScenario,
@@ -224,7 +226,7 @@ RAID_V0 = {
     "entities": [],
 }
 
-PIG_V0 = {
+PIG_CHASE_V0 = {
     "scenario_class": PigChaseScenario,
     "grid_size": (9, 9),
     "max_steps": 1000,
@@ -346,9 +348,31 @@ _BENCHMARKS = {
     "GridHunt-Swarm-v0": SWARM_V0,
     "GridHunt-Military-v0": MILITARY_V0,
     "GridHunt-Raid-v0": RAID_V0,
-    "GridHunt-PIG-v0": PIG_V0,
+    "GridHunt-PigChase-v0": PIG_CHASE_V0,
     "GridHunt-LandAndSea-v0": LAND_AND_SEA_V0,
 }
+
+
+_CONFIG_KEYS = (
+    "scenario_class",
+    "grid_size",
+    "predators",
+    "prey",
+    "entities",
+    "max_steps",
+    "render_mode",
+    "observation_mode",
+    "gui_config",
+    "trainable_prey",
+    "terrain_config",
+    "observation_encoders",
+    "use_action_mask",
+    "agent_role_map",
+    "encoder_order",
+    "reward_mode",
+    "prey_motion",
+    "prey_move_probability",
+)
 
 
 def _env_creator(env_config):
@@ -375,13 +399,36 @@ def _env_creator(env_config):
     )
 
 
-def make(env_name: str, render_mode: str = None, trainable_prey=None, **kwargs):
-    """Instantiate a benchmark environment."""
-    if env_name not in _BENCHMARKS:
-        raise ValueError(
-            f"Environment {env_name} not found. Available envs: {list(_BENCHMARKS.keys())}"
-        )
-    env_config = copy.deepcopy(_BENCHMARKS[env_name])
+def list_envs():
+    """IDs of the registered environments, for use with :func:`make`."""
+    return list(_BENCHMARKS)
+
+
+def make(env_id: str, render_mode: str | None = None, trainable_prey=None, **kwargs):
+    """Create a registered GridHunt environment.
+
+    Args:
+        env_id: a registered ID such as ``"GridHunt-ClassicStag-v0"``; see :func:`list_envs`.
+        render_mode: ``None``, ``"console"``, ``"rgb_array"`` or ``"gui"``.
+        trainable_prey: ids of prey to control as agents instead of moving by rule.
+        **kwargs: override any setting of the registered scenario (for example
+            ``max_steps``, ``observation_mode``, ``reward_mode``, ``predators``); see
+            :class:`GridHunt` for all of them. ``communication=k`` adds a k-token message
+            channel (:class:`CommunicationWrapper`).
+
+    Returns:
+        A PettingZoo ``ParallelEnv``.
+
+    Example:
+        >>> env = gridhunt.make("GridHunt-ToxicStag-v0", max_steps=200, reward_mode="team")
+        >>> observations, infos = env.reset(seed=0)
+    """
+    if env_id not in _BENCHMARKS:
+        raise ValueError(f"Unknown environment {env_id!r}. Registered environments: {list_envs()}")
+    unknown = set(kwargs) - set(_CONFIG_KEYS) - {"communication"}
+    if unknown:
+        raise TypeError(f"make() got unknown settings {sorted(unknown)}; valid settings: {sorted(_CONFIG_KEYS)}")
+    env_config = copy.deepcopy(_BENCHMARKS[env_id])
     if render_mode is not None:
         env_config["render_mode"] = render_mode
     if trainable_prey is not None:
@@ -391,3 +438,38 @@ def make(env_name: str, render_mode: str = None, trainable_prey=None, **kwargs):
     communication = env_config.pop("communication", 0)
     env = _env_creator(env_config)
     return CommunicationWrapper(env, communication) if communication else env
+
+
+def _register_with_pettingzoo():
+    """Make the environments available through pettingzoo.make("parallel", env_id) (PettingZoo >= 1.27)."""
+    try:
+        from pettingzoo import parallel_registry, register
+    except ImportError:
+        return
+    for env_id in _BENCHMARKS:
+        if env_id not in parallel_registry:
+            register("parallel", env_id, entry_point=functools.partial(make, env_id))
+
+
+_register_with_pettingzoo()
+
+__all__ = [
+    "__version__",
+    "make",
+    "list_envs",
+    "GridHunt",
+    "StagHuntScenario",
+    "ToxicStagHuntScenario",
+    "RaidScenario",
+    "PigChaseScenario",
+    "CommunicationWrapper",
+    "Predator",
+    "Prey",
+    "Stag",
+    "Hare",
+    "ToxicStag",
+    "Building",
+    "Pig",
+    "Entity",
+    "Terrain",
+]

@@ -1,6 +1,6 @@
 import random
 import warnings
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -8,7 +8,7 @@ import numpy as np
 def encode_agent_centric(
     base_obs: np.ndarray,
     agent_id: str,
-    agent_types: Dict[str, int],
+    agent_types: dict[str, int],
     encoding_size: int = 8,
 ) -> np.ndarray:
     """Append agent-type encoding to an observation."""
@@ -25,11 +25,11 @@ def encode_agent_centric(
 
 
 def create_action_mask(
-    agent_position: Tuple[int, int],
-    grid_size: Tuple[int, int],
-    restricted_terrains: Optional[Set[str]] = None,
-    terrain_at: Optional[Dict[Tuple[int, int], str]] = None,
-    terrain_config: Optional[Dict[str, Dict[str, Any]]] = None,
+    agent_position: tuple[int, int],
+    grid_size: tuple[int, int],
+    restricted_terrains: set[str] | None = None,
+    terrain_at: dict[tuple[int, int], str] | None = None,
+    terrain_config: dict[str, dict[str, Any]] | None = None,
 ) -> np.ndarray:
     """Return a 5-action validity mask."""
     if not isinstance(agent_position, tuple) or len(agent_position) != 2:
@@ -74,12 +74,12 @@ def create_action_mask(
 
 
 def detect_agent_types(
-    predator_ids: Set[str],
-    trainable_prey: Set[str],
-    agent_role_map: Optional[Dict[str, List[str]]] = None,
-) -> Dict[str, int]:
+    predator_ids: set[str],
+    trainable_prey: set[str],
+    agent_role_map: dict[str, list[str]] | None = None,
+) -> dict[str, int]:
     """Build agent_id -> type index."""
-    agent_types: Dict[str, int] = {}
+    agent_types: dict[str, int] = {}
     if agent_role_map:
         for type_idx, (role_id, agent_list) in enumerate(agent_role_map.items()):
             if not isinstance(agent_list, (list, set)):
@@ -107,12 +107,12 @@ def detect_agent_types(
 
 
 def gather_all_entity_positions(
-    predators: Dict[str, Any],
-    prey: Dict[str, Any],
-    entities: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Tuple[int, int]]:
+    predators: dict[str, Any],
+    prey: dict[str, Any],
+    entities: dict[str, Any] | None = None,
+) -> dict[str, tuple[int, int]]:
     """Collect entity positions."""
-    positions: Dict[str, Tuple[int, int]] = {}
+    positions: dict[str, tuple[int, int]] = {}
     for pred_id, predator in predators.items():
         if hasattr(predator, "position") and predator.position is not None:
             positions[pred_id] = predator.position
@@ -154,9 +154,9 @@ def calculate_observation_size(
     num_predators: int,
     num_prey: int,
     num_terrain_types: int,
-    grid_size: Tuple[int, int],
+    grid_size: tuple[int, int],
     observation_mode: str,
-    observation_encoders: Optional[List[str]] = None,
+    observation_encoders: list[str] | None = None,
 ) -> int:
     """Return flattened observation size for a config."""
     observation_encoders = observation_encoders or []
@@ -183,8 +183,8 @@ def calculate_observation_size(
 
 
 def _is_too_close_to_existing(
-    center_pos: Tuple[int, int],
-    existing_positions: Set[Tuple[int, int]],
+    center_pos: tuple[int, int],
+    existing_positions: set[tuple[int, int]],
     min_distance: int = 2,
 ) -> bool:
     if not existing_positions:
@@ -196,14 +196,15 @@ def _is_too_close_to_existing(
 
 
 def _generate_terrain_lines(
-    grid_size: Tuple[int, int],
+    grid_size: tuple[int, int],
     count: int = 3,
     length: int = 10,
     orientation: str = "both",
     min_distance: int = 2,
-    rng=random,
-) -> Set[Tuple[int, int]]:
-    positions: Set[Tuple[int, int]] = set()
+    *,
+    rng: random.Random,
+) -> set[tuple[int, int]]:
+    positions: set[tuple[int, int]] = set()
     width, height = grid_size
     for i in range(count):
         orient = "horizontal" if orientation == "both" and i % 2 == 0 else orientation
@@ -241,14 +242,15 @@ def _generate_terrain_lines(
 
 
 def _generate_terrain_blobs(
-    grid_size: Tuple[int, int],
+    grid_size: tuple[int, int],
     count: int = 5,
     blob_size: int = 3,
     density: float = 0.7,
     min_distance: int = 2,
-    rng=random,
-) -> Set[Tuple[int, int]]:
-    positions: Set[Tuple[int, int]] = set()
+    *,
+    rng: random.Random,
+) -> set[tuple[int, int]]:
+    positions: set[tuple[int, int]] = set()
     width, height = grid_size
     for _ in range(count):
         placed = False
@@ -256,8 +258,8 @@ def _generate_terrain_blobs(
             seed = (rng.randint(0, width - 1), rng.randint(0, height - 1))
             if _is_too_close_to_existing(seed, positions, min_distance):
                 continue
-            queue: List[Tuple[int, int]] = [seed]
-            visited: Set[Tuple[int, int]] = set()
+            queue: list[tuple[int, int]] = [seed]
+            visited: set[tuple[int, int]] = set()
             while queue:
                 x, y = queue.pop(0)
                 if (x, y) in visited or not (0 <= x < width and 0 <= y < height):
@@ -282,15 +284,16 @@ def _generate_terrain_blobs(
 
 
 def generate_terrain_map(
-    grid_size: Tuple[int, int],
-    terrain_config: Dict[str, Dict[str, Any]],
-    rng=random,
-) -> Dict[str, Set[Tuple[int, int]]]:
+    grid_size: tuple[int, int],
+    terrain_config: dict[str, dict[str, Any]],
+    *,
+    rng: random.Random,
+) -> dict[str, set[tuple[int, int]]]:
     """Generate terrain positions from generation config.
 
-    rng: random.Random-like generator (defaults to the global random module).
+    rng: the environment's seeded random.Random generator.
     """
-    terrain_map: Dict[str, Set[Tuple[int, int]]] = {}
+    terrain_map: dict[str, set[tuple[int, int]]] = {}
     for terrain_type, config in (terrain_config or {}).items():
         gen_config = config.get("generation", {})
         gen_type = gen_config.get("type", "blob")

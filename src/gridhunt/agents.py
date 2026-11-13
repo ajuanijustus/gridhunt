@@ -1,4 +1,3 @@
-import numpy as np
 
 from .assets import (
     BUILDING_SPRITE,
@@ -173,11 +172,11 @@ class ToxicStag(Prey):
         self.toxic_probability = toxic_probability
         # Sprite shown while toxic; pass STAG_SPRITE to hide toxicity from viewers
         self.toxic_render_sprite = toxic_render_sprite
-        self._reroll_disease_status()
+        # Healthy until the environment draws the toxicity from its own seeded RNG on reset
+        self.toxic_turns_alive = 0
 
-    def _reroll_disease_status(self, rng=None):
-        """Re-draw toxicity; rng is the env's generator (global numpy RNG if None)."""
-        rng = np.random if rng is None else rng
+    def _reroll_disease_status(self, rng):
+        """Re-draw toxicity with the environment's seeded generator."""
         if rng.random() < self.toxic_probability:
             self.status["toxic"] = True
             self.render_sprite = self.toxic_render_sprite

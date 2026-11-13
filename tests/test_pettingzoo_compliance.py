@@ -4,10 +4,10 @@ Based on PettingZoo's built-in test standards and best practices.
 Validates that GridHunt correctly implements the ParallelEnv contract.
 """
 
-import pytest
 import numpy as np
+import pytest
+
 import gridhunt
-from gymnasium.spaces import Box, Discrete, Sequence
 
 SCENARIOS = [
     "GridHunt-ClassicStag-v0",
@@ -214,7 +214,7 @@ class TestDeterminism:
 
         env1.reset(seed=123)
         rollout_1 = []
-        for step_num in range(5):
+        for _ in range(5):
             actions = {agent: 0 for agent in env1.agents}
             obs1, _, _, _, _ = env1.step(actions)
             rollout_1.append({agent: obs1[agent].copy() for agent in env1.agents})
@@ -266,7 +266,7 @@ class TestAgentPoolConsistency:
             for agent in env.agents:
                 space1 = env.action_space(agent)
                 space2 = env.action_space(agent)
-                assert type(space1) == type(space2)
+                assert type(space1) is type(space2)
 
                 sample1 = space1.sample()
                 sample2 = space2.sample()

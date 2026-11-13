@@ -17,6 +17,18 @@ First public release.
 - Optional explicit communication channel (`gridhunt.make(..., communication=k)`).
 - Scripted prey motion (`prey_motion="flee"`) and a team reward mode (`reward_mode="team"`).
 
+- `gridhunt.list_envs()`, and registration with PettingZoo's environment registry
+  (`pettingzoo.make("parallel", env_id)`, PettingZoo 1.27 or later).
+- Tests that replay fixed-action trajectories of every environment and compare them with
+  recorded references, so dynamics cannot change without a version bump.
+
+### Changed
+- `GridHunt-PIG-v0` is now `GridHunt-PigChase-v0`. Its dynamics are unchanged.
+- `gridhunt.make()` rejects unknown settings instead of silently ignoring them, and invalid
+  observation modes raise an error.
+- GridHunt no longer uses the global `random` or `numpy.random` state, not even when the
+  scenarios are built at import time.
+
 ### Fixed
 - Pig chase: observations returned right after a capture showed the capture positions and the
   pig's random respawn cell instead of the reset start positions.

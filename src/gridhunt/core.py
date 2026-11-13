@@ -1,13 +1,14 @@
-from pettingzoo import ParallelEnv
-from gymnasium.spaces import Discrete, Sequence, Box
-from .agents import Predator, Prey, Entity, Terrain
-from .assets import TERRAIN_SPRITE_DICT
-from . import helpers
-import numpy as np
+import copy
 import functools
 import random
-import copy
-from typing import Dict, List, Optional, Set, Tuple, Any
+
+import numpy as np
+from gymnasium.spaces import Box, Discrete, Sequence
+from pettingzoo import ParallelEnv
+
+from . import helpers
+from .agents import Entity, Predator, Prey, Terrain
+from .assets import TERRAIN_SPRITE_DICT
 
 STILL = 0
 UP = 1
@@ -22,6 +23,38 @@ MOVES = [STILL, UP, DOWN, LEFT, RIGHT]
 
 
 class GridHunt(ParallelEnv):
+    """Grid predator-prey environment with a PettingZoo ``ParallelEnv`` API.
+
+    Use :func:`gridhunt.make` for the registered scenarios; construct this class (or a
+    scenario subclass) directly to build a custom one.
+
+    Args:
+        grid_size: (width, height) of the grid.
+        predators: list of :class:`~gridhunt.Predator` (the controllable agents).
+        prey: list of :class:`~gridhunt.Prey` (or a subclass such as ``Stag`` or ``Hare``).
+        max_steps: episode length; agents are truncated after this many steps.
+        entities: non-capturable objects, drawn by the renderer but never observed by agents
+            (for example cues shown only to a human participant).
+        render_mode: ``None``, ``"console"``, ``"rgb_array"`` or ``"gui"`` (the last two need
+            ``pip install "gridhunt[render]"``).
+        observation_mode: one of ``observation_modes``: ``"coords"`` (prey, predator and terrain
+            coordinates), ``"flat_coords"`` (prey and predator coordinates), ``"one_hot"``
+            (one-hot grids; agents with ``limited_vision`` get an egocentric grid).
+        gui_config: buttons, dropdowns and the information bar for ``render_mode="gui"``.
+        trainable_prey: ids of prey that are controlled as agents instead of moving by rule.
+        terrain_config: terrain types with passability, speed and generation settings.
+        observation_encoders: extra features appended to observations: ``"agent_centric"``
+            and/or ``"action_mask"``.
+        use_action_mask: report each agent's valid moves in ``infos["__common__"]["action_masks"]``.
+        agent_role_map, encoder_order: advanced settings for the observation encoders.
+        reward_mode: ``"individual"`` (rewarded for own captures) or ``"team"`` (every
+            predator receives the team reward).
+        prey_motion: ``"static"``, ``"random"`` or ``"flee"`` for non-trainable prey.
+        prey_move_probability: probability that a moving prey moves on a given step.
+    """
+
+    observation_modes = ("coords", "flat_coords", "one_hot")
+
     def __init__(
         self,
         grid_size,
@@ -35,10 +68,10 @@ class GridHunt(ParallelEnv):
         gui_config=None,
         trainable_prey=None,
         terrain_config=None,
-        observation_encoders: Optional[List[str]] = None,
+        observation_encoders: list[str] | None = None,
         use_action_mask: bool = False,
-        agent_role_map: Optional[Dict[str, List[str]]] = None,
-        encoder_order: Optional[List[str]] = None,
+        agent_role_map: dict[str, list[str]] | None = None,
+        encoder_order: list[str] | None = None,
         reward_mode: str = "individual",
         prey_motion: str = "static",
         prey_move_probability: float = 0.5,
@@ -49,6 +82,10 @@ class GridHunt(ParallelEnv):
         if reward_mode not in REWARD_MODES:
             raise ValueError(f"reward_mode must be one of {REWARD_MODES}, got {reward_mode!r}")
         self.reward_mode = reward_mode
+        if observation_mode not in self.observation_modes:
+            raise ValueError(
+                f"observation_mode must be one of {self.observation_modes}, got {observation_mode!r}"
+            )
         # How non-trainable prey move: "static" (never), "random" (random direction) or
         # "flee" (away from the nearest predator), each step with prey_move_probability
         if prey_motion not in PREY_MOTIONS:
@@ -143,7 +180,7 @@ class GridHunt(ParallelEnv):
                 self.predator_ids, self.trainable_prey, self.agent_role_map
             )
         except ValueError as e:
-            raise ValueError(f"Phase 4 configuration error: {e}")
+            raise ValueError(f"Invalid agent_role_map: {e}") from e
 
         if self.render_mode is not None:
             # Rendering needs pygame (the optional "render" extra); import it only when used.
@@ -258,7 +295,7 @@ class GridHunt(ParallelEnv):
             coord for coord in valid_coordinates if coord not in used_positions
         ]
         self._py_rng.shuffle(valid_coordinates)
-        for predator_id, predator in self.predators.items():
+        for predator in self.predators.values():
             if predator.position is None:
                 if not valid_coordinates:
                     raise RuntimeError(
@@ -267,7 +304,7 @@ class GridHunt(ParallelEnv):
                 predator.position = valid_coordinates.pop()
             else:
                 used_positions.add(predator.position)
-        for prey_id, prey_item in self.prey.items():
+        for prey_item in self.prey.values():
             if prey_item.position is None:
                 if not valid_coordinates:
                     raise RuntimeError("Ran out of coordinates while placing prey.")
@@ -281,7 +318,7 @@ class GridHunt(ParallelEnv):
                 for y in range(self.grid_size[1])
             ]
             self._py_rng.shuffle(random__coordinates)
-            for entity_id, entity in self.entities.items():
+            for entity in self.entities.values():
                 entity.position = random__coordinates.pop()
         observations = self.get_observations()
         infos = {agent_id: {} for agent_id in self._agent_ids}
@@ -411,7 +448,7 @@ class GridHunt(ParallelEnv):
                 except (ValueError, RuntimeError) as e:
                     raise RuntimeError(
                         f"Failed to generate action mask for agent {agent_id}: {e}"
-                    )
+                    ) from e
 
         infos["__common__"] = {
             "prey_positions": {
@@ -428,14 +465,14 @@ class GridHunt(ParallelEnv):
 
         return observations, rewards, terminations, truncations, infos
 
-    @functools.lru_cache(maxsize=None)
+    @functools.cache
     def action_space(self, agent):
         if self.action_mode == "single":
             return Discrete(5)
         else:
             return Sequence(Discrete(5))
 
-    @functools.lru_cache(maxsize=None)
+    @functools.cache
     def observation_space(self, agent):
         """Return agent observation space."""
         num_predators = len(self.predator_ids)
@@ -489,7 +526,7 @@ class GridHunt(ParallelEnv):
                 observation_encoders=self.observation_encoders,
             )
         except ValueError as e:
-            raise ValueError(f"Failed to calculate observation size: {e}")
+            raise ValueError(f"Failed to calculate observation size: {e}") from e
 
         return Box(
             low=-1.0, high=max(grid_x, grid_y), shape=(obs_size,), dtype=np.float32
@@ -593,7 +630,7 @@ class GridHunt(ParallelEnv):
                     observation[idx + 1] = -1
                 idx += 2
 
-            for i, pred_id in enumerate(sorted(self.predator_ids)):
+            for pred_id in sorted(self.predator_ids):
                 observation[idx] = self.predators[pred_id].position[0]
                 observation[idx + 1] = self.predators[pred_id].position[1]
                 idx += 2
@@ -989,7 +1026,7 @@ class GridHunt(ParallelEnv):
             except Exception as e:
                 raise RuntimeError(
                     f"Error applying encoder '{encoder_name}' to agent {agent_id}: {e}"
-                )
+                ) from e
 
         return obs.astype(np.float32)
 

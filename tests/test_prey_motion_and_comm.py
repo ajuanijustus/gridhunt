@@ -1,9 +1,7 @@
 """Scripted prey motion and the optional communication channel."""
 
 import random
-import sys
 import warnings
-from pathlib import Path
 
 import numpy as np
 import pytest

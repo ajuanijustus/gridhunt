@@ -40,7 +40,7 @@ SCENARIOS = {
     # inputs per agent) left every baseline at or below the random team in the 5M-step pilot.
     "raid": {"env_id": "GridHunt-Raid-v0", "max_steps": 200, "budget": 7_000_000, "group": "main",
              "env_kwargs": {"observation_mode": "flat_coords"}},
-    "pig_chase": {"env_id": "GridHunt-PIG-v0", "max_steps": 200, "budget": 20_000_000, "group": "main"},
+    "pig_chase": {"env_id": "GridHunt-PigChase-v0", "max_steps": 200, "budget": 20_000_000, "group": "main"},
     "land_and_sea": {"env_id": "GridHunt-LandAndSea-v0", "max_steps": 200, "budget": 7_000_000, "group": "main"},
     "swarm": {"env_id": "GridHunt-Swarm-v0", "max_steps": 300, "budget": 20_000_000, "group": "main",
               "env_kwargs": {"observation_mode": "flat_coords"}},
