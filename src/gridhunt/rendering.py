@@ -1,4 +1,5 @@
 import os
+import sys
 
 import numpy as np
 import pygame
@@ -57,12 +58,10 @@ class Renderer:
         self._info_text_surface = None
         self._layout = None
 
-        # Initialize pygame only for GUI mode
-        if self.env.render_mode == "gui":
-            if pygame_gui is None:
-                raise ImportError(
-                    "pygame_gui is required for render_mode='gui'. Install it with: pip install pygame_gui"
-                )
+        # "gui" draws to a window; "rgb_array" draws the same frame to a hidden window
+        if self.env.render_mode in ("gui", "rgb_array"):
+            if self.info_bar and pygame_gui is None:
+                raise ImportError("pygame_gui is required for the info bar: pip install 'gridhunt[render]'")
             self._setup_pygame()
             self._setup_surfaces()
             if self.info_bar:
@@ -140,6 +139,11 @@ class Renderer:
 
     def _setup_pygame(self) -> None:
         """Initialize pygame window, surfaces, and display."""
+        hidden = self.env.render_mode == "rgb_array"
+        if hidden and not pygame.display.get_init() and sys.platform.startswith("linux"):
+            # Off-screen frames need no display server (for example on CI machines)
+            if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+                os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
         pygame.init()
         os.environ["SDL_VIDEO_WINDOW_POS"] = "0,0"
 
@@ -183,7 +187,7 @@ class Renderer:
         self._info_bar_y = self._board_y_offset + scaled_game_board_height
 
         # Create display and clock
-        self._screen = pygame.display.set_mode(self._screen_size)
+        self._screen = pygame.display.set_mode(self._screen_size, pygame.HIDDEN if hidden else 0)
         self._clock = pygame.time.Clock()
         pygame.display.set_caption("GridHunt")
 
@@ -280,20 +284,23 @@ class Renderer:
                 manager=self._ui_manager,
             )
 
-    def render(self) -> None:
+    def render(self) -> np.ndarray | None:
         """
         Render one frame of the current environment state.
 
-        Should be called after each env.step() to display the updated state.
-        The render mode ('gui', 'console', or None) is determined by the
-        environment at initialization and cannot be changed per frame.
+        Returns the frame as an RGB array for render_mode="rgb_array", and None otherwise.
+        The render mode is set when the environment is created.
         """
         if self.env.render_mode is None:
-            return
-        elif self.env.render_mode == "console":
+            return None
+        if self.env.render_mode == "console":
             self._render_console()
-        elif self.env.render_mode == "gui":
-            self._render_gui()
+            return None
+        self._draw_frame()
+        if self.env.render_mode == "rgb_array":
+            return self.get_frame()
+        pygame.display.flip()
+        return None
 
     def _render_console(self) -> None:
         """
@@ -326,12 +333,9 @@ class Renderer:
             print(row)
         print()
 
-    def _render_gui(self) -> None:
+    def _draw_frame(self) -> None:
         """
-        Render the environment in an interactive pygame window.
-
-        Displays the scaled game board centered on screen, with an optional
-        info bar showing score and UI controls. Updates the display each frame.
+        Draw the scaled game board, centered, and the optional info bar onto the screen surface.
         """
         # Build complete game board with all layers
         game_board = self._build_game_board()
@@ -354,8 +358,6 @@ class Renderer:
         if self.info_bar:
             self._render_info_bar()
             self._ui_manager.draw_ui(self._screen)
-
-        pygame.display.flip()
 
     def _get_limited_vision_predator(self):
         """
@@ -471,8 +473,16 @@ class Renderer:
         board.blit(self._grid_layer, (0, 0))
         board.blit(self._entity_layer, (0, 0))
 
-        # Apply vision mask if any predator has limited_vision enabled in status
-        limited_vision_predator = self._get_limited_vision_predator()
+        # Darken what an agent cannot see. gui_config["vision_mask"]: "auto" (default) masks to the
+        # first predator with limited vision, None shows the whole board, an agent id masks to
+        # that agent's view
+        vision_mask = self.gui_config.get("vision_mask", "auto")
+        if vision_mask == "auto":
+            limited_vision_predator = self._get_limited_vision_predator()
+        elif vision_mask is None:
+            limited_vision_predator = None
+        else:
+            limited_vision_predator = self.env.predators.get(vision_mask)
         if limited_vision_predator:
             vision_mask = self._create_vision_mask(
                 limited_vision_predator.position,

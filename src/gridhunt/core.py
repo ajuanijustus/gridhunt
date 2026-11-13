@@ -54,6 +54,7 @@ class GridHunt(ParallelEnv):
     """
 
     observation_modes = ("coords", "flat_coords", "one_hot")
+    metadata = {"name": "gridhunt", "render_modes": ["console", "rgb_array", "gui"], "is_parallelizable": True}
 
     def __init__(
         self,
@@ -93,16 +94,7 @@ class GridHunt(ParallelEnv):
         self.prey_motion = prey_motion
         self.prey_move_probability = prey_move_probability
 
-        self.entities = (
-            None
-            if not entities
-            else {
-                entity.entity_id if isinstance(entity, Entity) else entity: (
-                    entity if isinstance(entity, Entity) else Entity(entity)
-                )
-                for entity in entities
-            }
-        )
+        self.entities = self._entity_dict(entities)
         self.prey = {
             prey_item.prey_id if isinstance(prey_item, Prey) else prey_item: (
                 prey_item if isinstance(prey_item, Prey) else Prey(prey_item)
@@ -150,6 +142,9 @@ class GridHunt(ParallelEnv):
         # seeding one env never affects another env or the training library
         self._np_rng = np.random.RandomState()
         self._py_rng = random.Random()
+        # Entities are only drawn for human viewers, so they get their own generator: adding,
+        # removing or moving them never changes what the agents experience
+        self._entity_rng = random.Random()
 
         self.terrain_config = terrain_config or {}
         self.terrain_map = {}
@@ -182,6 +177,9 @@ class GridHunt(ParallelEnv):
         except ValueError as e:
             raise ValueError(f"Invalid agent_role_map: {e}") from e
 
+        if render_mode not in (None, *self.metadata["render_modes"]):
+            raise ValueError(f"render_mode must be None or one of {self.metadata['render_modes']}, got {render_mode!r}")
+        self.renderer = None
         if self.render_mode is not None:
             # Rendering needs pygame (the optional "render" extra); import it only when used.
             try:
@@ -192,6 +190,59 @@ class GridHunt(ParallelEnv):
                     "pip install 'gridhunt[render]'"
                 ) from error
             self.renderer = Renderer(env=self, gui_config=self.gui_config)
+
+    @staticmethod
+    def _entity_dict(entities):
+        if not entities:
+            return None
+        return {
+            entity.entity_id if isinstance(entity, Entity) else entity: (
+                entity if isinstance(entity, Entity) else Entity(entity)
+            )
+            for entity in entities
+        }
+
+    def set_entities(self, entities):
+        """Replace the human-only entities; they appear at the next reset().
+
+        Entities are drawn by the renderer but are never part of observations, state() or the
+        dynamics. Entities without a position are placed on a random cell at every reset.
+        """
+        self.entities = self._entity_dict(entities)
+        self._initial_entities = copy.deepcopy(self.entities)
+
+    def set_prey(self, prey):
+        """Replace the prey settings (for example a stag's toxic probability) from the next reset().
+
+        The new prey must have the same ids as the current ones, so observation and state
+        spaces stay the same.
+        """
+        new = {
+            item.prey_id if isinstance(item, Prey) else item: item if isinstance(item, Prey) else Prey(item)
+            for item in prey
+        }
+        if set(new) != self.prey_ids:
+            raise ValueError(f"set_prey needs the same prey ids {sorted(self.prey_ids)}, got {sorted(new)}")
+        self._initial_prey = copy.deepcopy(new)
+        self.prey = copy.deepcopy(new)
+        rewards = [abs(item.reward) for item in new.values()]
+        self.max_reward = max(rewards) if rewards else 1.0
+
+    def render(self):
+        """Draw the current state.
+
+        Returns an RGB array of shape (height, width, 3) for ``render_mode="rgb_array"``,
+        prints the grid for ``"console"`` and updates the window for ``"gui"``.
+        """
+        if self.renderer is None:
+            return None
+        return self.renderer.render()
+
+    def close(self):
+        """Close the window and release rendering resources."""
+        if self.renderer is not None:
+            self.renderer.close()
+            self.renderer = None
 
     @property
     def possible_agents(self):
@@ -254,6 +305,7 @@ class GridHunt(ParallelEnv):
         if seed is not None:
             self._np_rng.seed(seed)
             self._py_rng.seed(seed)
+            self._entity_rng.seed(f"gridhunt-entities-{seed}")
 
         # New random terrain layout every episode (predefined layouts never change)
         if self.terrain_config and self._has_procedural_terrain():
@@ -312,14 +364,11 @@ class GridHunt(ParallelEnv):
             else:
                 used_positions.add(prey_item.position)
         if self.entities is not None:
-            random__coordinates = [
-                (x, y)
-                for x in range(self.grid_size[0])
-                for y in range(self.grid_size[1])
-            ]
-            self._py_rng.shuffle(random__coordinates)
+            cells = [(x, y) for x in range(self.grid_size[0]) for y in range(self.grid_size[1])]
+            self._entity_rng.shuffle(cells)
             for entity in self.entities.values():
-                entity.position = random__coordinates.pop()
+                if entity.position is None:
+                    entity.position = cells.pop()
         observations = self.get_observations()
         infos = {agent_id: {} for agent_id in self._agent_ids}
         infos["__common__"] = {

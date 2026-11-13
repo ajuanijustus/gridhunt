@@ -5,8 +5,9 @@ and human-agent teaming, with a [PettingZoo](https://pettingzoo.farama.org) `Par
 
 - **Heterogeneous agents:** capture power, vision radius, speed and terrain restrictions are set per agent.
 - **Mixed-motive scenarios:** stag hunts, toxic prey, risky targets, roles that only scout.
-- **Human-agent teaming:** a configurable pygame interface with buttons, an information bar and
-  human-only visual cues, for human-in-the-loop and human-on-the-loop studies.
+- **Human-agent teaming:** `gridhunt.hat` runs studies with people in or on the loop: keyboard
+  control with reaction times, AI teammates, buttons that switch teams of policies, cues only
+  the participant sees, questionnaires and per-participant JSON Lines logs.
 - **Baselines:** IPPO, MAPPO and HAPPO over 20 seeds, reported as IQM with 95% bootstrap CIs
   ([benchmark/](benchmark/BENCHMARK.md)).
 
@@ -15,6 +16,7 @@ and human-agent teaming, with a [PettingZoo](https://pettingzoo.farama.org) `Par
 ```bash
 pip install gridhunt            # environments only (numpy, gymnasium, pettingzoo)
 pip install "gridhunt[render]"  # + pygame window, rgb_array frames and the interactive GUI
+pip install "gridhunt[hat]"     # + the human-agent teaming toolkit
 ```
 
 From source:
@@ -41,6 +43,31 @@ while env.agents:
 for example `gridhunt.make("GridHunt-ToxicStag-v0", max_steps=200, reward_mode="team")`. With
 PettingZoo 1.27 or later, `import gridhunt` also registers every environment with PettingZoo, so
 `pettingzoo.make("parallel", "GridHunt-ClassicStag-v0")` works too.
+
+## Human-agent teaming
+
+```python
+import gridhunt
+from gridhunt.hat import ARROW_KEYS, HumanSession, Likert, Questionnaire, SessionLog
+from gridhunt.policies import GreedyPolicy
+
+env = gridhunt.make("GridHunt-ClassicStag-v0")
+session = HumanSession(
+    env,
+    humans={"predator_0": ARROW_KEYS},              # the participant plays this hunter
+    teammates={"predator_1": GreedyPolicy()},       # an AI teammate plays the other
+    log=SessionLog("hat_logs", participant="P01"),
+)
+with session:
+    for round_ in range(3):
+        session.run_episode(seed=round_, max_steps=60)
+        session.ask(Questionnaire([Likert("trust", "I trusted my AI teammate.")]))
+```
+
+[`examples/hitl_play_with_ai.py`](examples/hitl_play_with_ai.py) is a complete version, and
+[`examples/hotl_policy_delegation.py`](examples/hotl_policy_delegation.py) is a human-on-the-loop
+study in which the participant chooses which AI team plays from cues only they can see. Both run
+headless with `--dry-run`.
 
 ## Scenarios
 

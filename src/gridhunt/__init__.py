@@ -437,6 +437,7 @@ def make(env_id: str, render_mode: str | None = None, trainable_prey=None, **kwa
     # communication=k adds a k-token message channel (see wrappers.CommunicationWrapper)
     communication = env_config.pop("communication", 0)
     env = _env_creator(env_config)
+    env.env_id = env_id
     return CommunicationWrapper(env, communication) if communication else env
 
 
