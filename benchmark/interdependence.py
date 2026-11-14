@@ -10,10 +10,11 @@ no drop means it can be solved without it.
 
 The scripted team reads the true state, so this measures capture and role
 interdependence (who is needed to capture what), not information interdependence
-(who needs to see what). That is measured again with trained policies later.
+(who needs to see what). The benchmark variants test information interdependence with
+trained teams (protocol.py: specialists_full_vision, toxic_stag_blind, military_full_vision).
 
 Usage:
-    python benchmark/interdependence.py                 # all scenarios
+    python benchmark/interdependence.py                 # all main scenarios
     python benchmark/interdependence.py --episodes 100 --scenarios toxic_stag raid
 """
 
@@ -27,7 +28,7 @@ import numpy as np
 from protocol import EVAL_SEED_OFFSET, MAIN_SCENARIOS, SCENARIOS, make_env
 from reference_policies import GreedyPolicy, IdlePolicy, RandomPolicy, run_episode
 
-OUTPUT_DIR = Path("benchmark/results/interdependence")
+OUTPUT = Path("benchmark/results/summary/interdependence.csv")
 
 
 def mean_ci(values):
@@ -78,12 +79,13 @@ def ablate(scenario, episodes):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--episodes", type=int, default=50)
+    parser.add_argument("--episodes", type=int, default=100)
     parser.add_argument("--scenarios", nargs="+", default=MAIN_SCENARIOS, choices=list(SCENARIOS))
+    parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    csv_path = OUTPUT_DIR / "interdependence.csv"
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    csv_path = args.output
     # One process per scenario
     with ProcessPoolExecutor(max_workers=min(len(args.scenarios), os.cpu_count() or 1)) as pool:
         results = dict(zip(args.scenarios, pool.map(ablate, args.scenarios, [args.episodes] * len(args.scenarios))))

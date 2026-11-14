@@ -31,12 +31,18 @@ First public release.
   scenario) as numpy-only policies, downloaded on first use, checked against SHA-256 hashes and
   cached. A team plays on its own (`team.act(observations)`) or as teammates in a `HumanSession`,
   and `team.make_env()` rebuilds the exact scenario it was trained in.
+- Benchmark reproduction: `benchmark/requirements.txt` with the exact library versions behind
+  the published results, `package_runs.py` to check and package the runs for archiving, and the
+  interdependence ablation in the committed summary.
 - `env.render()` and `env.close()`, a working `render_mode="rgb_array"`, and
   `gui_config["vision_mask"]` to choose whose view the renderer shows.
 - `env.set_entities()` and `env.set_prey()` to change human-only cues and prey settings between
   episodes.
 
 ### Changed
+- The SLURM scripts work on any cluster: its account, log folder and environment set-up live in
+  `benchmark/slurm/cluster.env`, and scripts are submitted through `benchmark/slurm/submit.sh`.
+- The benchmark documentation is now `benchmark/README.md`.
 - `GridHunt-PIG-v0` is now `GridHunt-PigChase-v0`. Its dynamics are unchanged.
 - `gridhunt.make()` rejects unknown settings instead of silently ignoring them, and invalid
   observation modes raise an error.
@@ -47,6 +53,7 @@ First public release.
   entities, so their dynamics are unchanged.
 
 ### Fixed
+- `CommunicationWrapper.unwrapped` returned the wrapper instead of the environment underneath.
 - `env.render()` raised `NotImplementedError`, and `render_mode="rgb_array"` was accepted but
   drew nothing.
 - Pig chase: observations returned right after a capture showed the capture positions and the

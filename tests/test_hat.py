@@ -197,6 +197,18 @@ def test_quit_key_ends_the_session(tmp_path):
     assert records(log, "session_end")[0]["quit"] is True
 
 
+def test_sessions_work_with_the_communication_channel(tmp_path):
+    env = gridhunt.make("GridHunt-Specialists-v0", communication=4)
+    assert env.unwrapped is not env and isinstance(env.unwrapped, gridhunt.GridHunt)
+    log = SessionLog(tmp_path)
+    with HumanSession(env, humans={"bruiser_0": ARROW_KEYS}, teammates={"scout_0": lambda obs, agent, env: 7},
+                      turn_timeout=0.0, log=log, headless=True, event_source=Script([])) as session:
+        session.run_episode(seed=0, max_steps=3)
+    steps = records(log, "step")
+    assert [s["actions"]["scout_0"] for s in steps] == [7, 7, 7]  # move 2 with token 1
+    assert len(steps[0]["state"]) == env.state_space.shape[0]
+
+
 def test_session_rejects_agents_controlled_twice_or_not_at_all():
     env = gridhunt.make("GridHunt-ClassicStag-v0")
     with pytest.raises(ValueError, match="nobody controls"):

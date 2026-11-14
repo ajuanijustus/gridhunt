@@ -282,7 +282,7 @@ class HumanSession:
                     "positions": self._positions(),
                 }
                 if self.log.log_state:
-                    record["state"] = self.base.state()
+                    record["state"] = self.env.state()  # includes messages when communicating
                 self.log.write("step", **record)
             self.step += 1
             if max_steps is not None and self.step >= max_steps:

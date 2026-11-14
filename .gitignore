@@ -35,3 +35,6 @@ hat_logs/
 # Exported zoo models (published as release assets, not committed)
 zoo_export/
 *.npz
+
+# Per-cluster SLURM settings (see benchmark/slurm/cluster.env.example)
+benchmark/slurm/cluster.env

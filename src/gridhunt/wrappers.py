@@ -50,6 +50,11 @@ class CommunicationWrapper(ParallelEnv):
     def agents(self):
         return self.env.agents
 
+    @property
+    def unwrapped(self):
+        """The GridHunt environment underneath (PettingZoo wrapper convention)."""
+        return self.env.unwrapped
+
     def observation_space(self, agent):
         if agent not in self._observation_spaces:
             inner = self.env.observation_space(agent)

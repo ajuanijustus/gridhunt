@@ -10,7 +10,7 @@ Usage (from the repository root):
     python benchmark/slurm/make_jobs.py --scenarios all --seeds 0-2 --budget 5000000 --out pilot_jobs.txt
     # Full benchmark: budgets from protocol.py, 20 seeds
     python benchmark/slurm/make_jobs.py --scenarios main --seeds 0-19 --out jobs.txt
-    sbatch --array=1-$(wc -l < jobs.txt)%100 benchmark/slurm/run_array.sh jobs.txt
+    benchmark/slurm/submit.sh --time=1-12:00:00 --array=1-$(wc -l < jobs.txt)%100 benchmark/slurm/run_array.sh jobs.txt
 """
 
 import argparse
@@ -88,7 +88,8 @@ def main():
     args.out.write_text("\n".join(lines) + ("\n" if lines else ""))
     print(f"Wrote {len(lines)} jobs to {args.out} ({skipped} already finished)")
     if lines:
-        print(f"Submit with: sbatch --array=1-{len(lines)}%100 benchmark/slurm/run_array.sh {args.out}")
+        print(f"Submit with: benchmark/slurm/submit.sh --time=1-12:00:00 --array=1-{len(lines)}%100 "
+              f"benchmark/slurm/run_array.sh {args.out}")
 
 
 if __name__ == "__main__":

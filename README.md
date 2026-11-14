@@ -9,7 +9,7 @@ and human-agent teaming, with a [PettingZoo](https://pettingzoo.farama.org) `Par
   control with reaction times, AI teammates, buttons that switch teams of policies, cues only
   the participant sees, questionnaires and per-participant JSON Lines logs.
 - **Baselines:** IPPO, MAPPO and HAPPO over 20 seeds, reported as IQM with 95% bootstrap CIs
-  ([benchmark/](benchmark/BENCHMARK.md)).
+  ([benchmark/](benchmark/README.md)).
 
 ## Install
 
