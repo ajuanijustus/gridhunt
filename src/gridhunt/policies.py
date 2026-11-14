@@ -10,7 +10,7 @@
 Every policy can be called two ways:
 
 - ``policy.act(env, agent_id)``, as the benchmark does;
-- ``policy(observation, agent_id, env)``, the teammate interface used by :mod:`gridhunt.hat`.
+- ``policy(observation, agent_id, env)``, the teammate interface used by ``gridhunt.hat``.
 
 Policies read the environment state (env.predators, env.prey, env.terrain_at) and never draw
 from the environment's random generators, so they do not change its trajectory.

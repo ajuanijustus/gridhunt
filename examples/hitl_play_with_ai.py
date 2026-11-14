@@ -44,7 +44,7 @@ def main():
 
     intro = Questionnaire([Message(
         "You are the blue hunter. Move with the arrow keys; press Return to stay put.\n\n"
-        "The stag is worth 10 but needs both hunters at once. A hare is worth 1 and can be caught alone.\n\n"
+        "The stag is worth 5 but needs both hunters at once. A hare is worth 1 and can be caught alone.\n\n"
         "Each round lasts a fixed number of moves. Try to score as much as you can as a team."
     )])
     after_round = Questionnaire(

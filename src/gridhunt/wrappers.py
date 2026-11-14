@@ -13,7 +13,7 @@ class CommunicationWrapper(ParallelEnv):
     next observation ends with all agents' tokens from that step (one one-hot block
     per agent, in possible_agents order; all zero after reset). The tokens are also
     appended to state() so centralised critics see them, and are reported in
-    infos["__common__"]["messages"].
+    ``infos["__common__"]["messages"]``.
 
     Tokens have no meaning to the environment: any meaning must be learned. Moves
     0-4 are therefore still valid actions (token 0).

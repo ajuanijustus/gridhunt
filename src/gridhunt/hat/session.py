@@ -6,7 +6,7 @@ and the time from the frame appearing to the key press is logged as the reaction
 
 Human on the loop: AI agents play on their own (``step_interval`` seconds per step) and the
 participant supervises with buttons, for example switching which team of policies is in
-control (``teams``), pausing, or anything a :class:`Button` callback does.
+control (``teams``), pausing, or anything a ``Button`` callback does.
 """
 
 import time
@@ -51,18 +51,18 @@ class HumanSession:
     Args:
         env: a GridHunt environment, created without a render mode; the session opens the window.
         humans: ``{agent_id: key_map}`` for agents controlled from the keyboard, where a key map
-            is ``{pygame_key: action}`` such as :data:`ARROW_KEYS` or :data:`WASD_KEYS`.
+            is ``{pygame_key: action}`` such as ``ARROW_KEYS`` or ``WASD_KEYS``.
         teammates: ``{agent_id: policy}`` for AI-controlled agents. A policy is called as
             ``policy(observation, agent_id, env)`` and returns an action; if it has a ``reset()``
             method it is called at the start of every episode. The scripted policies in
-            :mod:`gridhunt.policies` and the pretrained ones in :mod:`gridhunt.zoo` work as is.
+            ``gridhunt.policies`` and the pretrained ones in ``gridhunt.zoo`` work as is.
         teams: ``{name: {agent_id: policy}}``: alternative sets of teammates. Each team gets a
             button that puts it in control; ``initial_team`` (default: the first) starts.
-        buttons: extra :class:`Button` objects.
+        buttons: extra ``Button`` objects.
         pause_button: add a Pause button (the pause key works either way).
         info: text for the information bar, or ``callable(session) -> str``; default: episode,
             step, score and the team in control.
-        log: a :class:`~gridhunt.hat.SessionLog`, or None for no logging.
+        log: a ``gridhunt.hat.SessionLog``, or None for no logging.
         step_interval: seconds per step. None (default when there are humans) waits for every
             human to choose; a number advances on a timer, and humans who have not pressed a
             key by then stay still.
@@ -76,7 +76,8 @@ class HumanSession:
         headless: draw to a hidden window instead of showing one (tests, dry runs).
         event_source: callable returning the pending pygame events (default
             ``pygame.event.get``); scripted tests replace it.
-        pause_key, quit_key: keys that pause and end the session.
+        pause_key: key that pauses and resumes (default P).
+        quit_key: key that ends the session (default Escape).
     """
 
     def __init__(self, env, humans=None, teammates=None, teams=None, initial_team=None, buttons=(),
@@ -230,7 +231,7 @@ class HumanSession:
     # ------------------------------------------------------------- episodes
 
     def run_episode(self, seed=None, max_steps=None, stop_when=None, **fields):
-        """Play one episode and return an :class:`EpisodeResult`.
+        """Play one episode and return an ``EpisodeResult``.
 
         Args:
             seed: passed to ``env.reset``.

@@ -31,6 +31,8 @@ First public release.
   scenario) as numpy-only policies, downloaded on first use, checked against SHA-256 hashes and
   cached. A team plays on its own (`team.act(observations)`) or as teammates in a `HumanSession`,
   and `team.make_env()` rebuilds the exact scenario it was trained in.
+- Documentation site: scenario pages generated from the registered configurations, guides,
+  the human-agent teaming toolkit and its log format, benchmark results and the API reference.
 - Benchmark reproduction: `benchmark/requirements.txt` with the exact library versions behind
   the published results, `package_runs.py` to check and package the runs for archiving, and the
   interdependence ablation in the committed summary.

@@ -2,6 +2,7 @@
 
 Heterogeneous, mixed-motive predator-prey environments for multi-agent reinforcement learning
 and human-agent teaming, with a [PettingZoo](https://pettingzoo.farama.org) `ParallelEnv` API.
+Documentation: [ajuanijustus.github.io/gridhunt](https://ajuanijustus.github.io/gridhunt/).
 
 - **Heterogeneous agents:** capture power, vision radius, speed and terrain restrictions are set per agent.
 - **Mixed-motive scenarios:** stag hunts, toxic prey, risky targets, roles that only scout.
@@ -91,7 +92,7 @@ headless with `--dry-run`.
 | `GridHunt-Raid-v0` | 12×12 | 3 | Targets of rising value need more raiders and may be trapped |
 | `GridHunt-PigChase-v0` | 9×9 | 2 | Two predators must reach the pig together through a maze |
 | `GridHunt-LandAndSea-v0` | 10×10 | 2 | A boat and a land unit, each confined to its terrain |
-| `GridHunt-Swarm-v0` | 23×23 | 10 | Many predators, shared reward and overcrowding penalties |
+| `GridHunt-Swarm-v0` | 23×23 | 10 | Ten predators, three stags and five hares; crowding onto a hare costs points |
 
 ## Repository layout
 
@@ -101,7 +102,7 @@ headless with `--dry-run`.
 | [`benchmark/`](benchmark) | Benchmark protocol, IPPO/MAPPO/HAPPO baselines, analysis and results (not installed) |
 | [`tests/`](tests) | Library tests |
 | [`examples/`](examples) | Runnable examples |
-| [`docs/`](docs) | Documentation site sources |
+| [`docs/`](docs) | Documentation site sources (`mkdocs serve` to preview) |
 
 ## Citing
 

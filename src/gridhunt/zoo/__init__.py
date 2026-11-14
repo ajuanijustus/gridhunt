@@ -14,7 +14,7 @@ teammates). Models are downloaded on first use, checked against their SHA-256 ha
     while env.agents:
         observations, *_ = env.step(team.act(observations))
 
-A team is also a teammate for :class:`gridhunt.hat.HumanSession`: it is called as
+A team is also a teammate for ``gridhunt.hat.HumanSession``: it is called as
 ``team(observation, agent_id, env)``, so ``teammates={"predator_1": team}`` lets a trained
 agent play alongside a participant.
 
@@ -105,7 +105,7 @@ def load(scenario, algo, rank="median", seed=None, rng=None):
     """Load a published team.
 
     Args:
-        scenario: a benchmark scenario name, for example ``"toxic_stag"``; see :func:`list_models`.
+        scenario: a benchmark scenario name, for example ``"toxic_stag"``; see ``list_models``.
         algo: ``"ippo"``, ``"mappo"`` or ``"happo"``.
         rank: ``"median"`` (the run with the median final score) or ``"best"``.
         seed: pick a specific training seed instead of a rank (only if that run is published).
@@ -194,7 +194,7 @@ class ZooTeam:
         return {agent: self.act_agent(agent, obs, greedy) for agent, obs in observations.items()}
 
     def __call__(self, observation, agent_id, env=None):
-        """Teammate interface for :class:`gridhunt.hat.HumanSession`."""
+        """Teammate interface for ``gridhunt.hat.HumanSession``."""
         return self.act_agent(agent_id, observation)
 
     def reset(self):

@@ -1,6 +1,6 @@
 """Questionnaires and instruction screens shown in the study window between episodes.
 
-Build a :class:`Questionnaire` from items and pass it to :meth:`HumanSession.ask`::
+Build a ``Questionnaire`` from items and pass it to ``HumanSession.ask``::
 
     trust = Questionnaire([
         Message("Please answer a few questions about the last round."),
@@ -65,7 +65,7 @@ class QuitRequested(Exception):
 
 
 class Questionnaire:
-    """An ordered list of items: :class:`Message`, :class:`Likert`, :class:`Choice`, :class:`Text`.
+    """An ordered list of items: ``Message``, ``Likert``, ``Choice``, ``Text``.
 
     Args:
         items: the items, shown in order.

@@ -41,10 +41,11 @@ hat = ["gridhunt[render]"]
 # Baselines and analysis in benchmark/ (not part of the installed package)
 benchmark = ["torch>=2.3", "matplotlib>=3.8"]
 dev = ["gridhunt[render]", "pytest>=7.4", "ruff>=0.6"]
-docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.25"]
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.5", "mkdocstrings[python]>=0.25", "mkdocs-gen-files>=0.5"]
 
 [project.urls]
 Homepage = "https://github.com/ajuanijustus/gridhunt"
+Documentation = "https://ajuanijustus.github.io/gridhunt/"
 Repository = "https://github.com/ajuanijustus/gridhunt"
 Issues = "https://github.com/ajuanijustus/gridhunt/issues"
 Changelog = "https://github.com/ajuanijustus/gridhunt/blob/main/CHANGELOG.md"

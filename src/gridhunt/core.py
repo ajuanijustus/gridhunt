@@ -25,13 +25,13 @@ MOVES = [STILL, UP, DOWN, LEFT, RIGHT]
 class GridHunt(ParallelEnv):
     """Grid predator-prey environment with a PettingZoo ``ParallelEnv`` API.
 
-    Use :func:`gridhunt.make` for the registered scenarios; construct this class (or a
+    Use ``gridhunt.make`` for the registered scenarios; construct this class (or a
     scenario subclass) directly to build a custom one.
 
     Args:
         grid_size: (width, height) of the grid.
-        predators: list of :class:`~gridhunt.Predator` (the controllable agents).
-        prey: list of :class:`~gridhunt.Prey` (or a subclass such as ``Stag`` or ``Hare``).
+        predators: list of ``gridhunt.Predator`` (the controllable agents).
+        prey: list of ``gridhunt.Prey`` (or a subclass such as ``Stag`` or ``Hare``).
         max_steps: episode length; agents are truncated after this many steps.
         entities: non-capturable objects, drawn by the renderer but never observed by agents
             (for example cues shown only to a human participant).
@@ -46,7 +46,9 @@ class GridHunt(ParallelEnv):
         observation_encoders: extra features appended to observations: ``"agent_centric"``
             and/or ``"action_mask"``.
         use_action_mask: report each agent's valid moves in ``infos["__common__"]["action_masks"]``.
-        agent_role_map, encoder_order: advanced settings for the observation encoders.
+        agent_role_map: ``{role: [agent ids]}`` for the ``agent_centric`` encoder (default: predator
+            and trainable prey roles).
+        encoder_order: order in which the observation encoders are appended.
         reward_mode: ``"individual"`` (rewarded for own captures) or ``"team"`` (every
             predator receives the team reward).
         prey_motion: ``"static"``, ``"random"`` or ``"flee"`` for non-trainable prey.

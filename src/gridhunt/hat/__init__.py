@@ -1,10 +1,10 @@
 """Human-agent teaming toolkit: run GridHunt with people in or on the loop.
 
-- :class:`HumanSession`: the study window, keyboard control of agents, AI teammates, buttons
+- ``HumanSession``: the study window, keyboard control of agents, AI teammates, buttons
   that switch teams of policies, pausing, reaction times.
-- :class:`SessionLog`: one JSON Lines file per participant session plus a metadata file.
-- :class:`Questionnaire` with :class:`Likert`, :class:`Choice`, :class:`Text` and
-  :class:`Message` items, shown between episodes.
+- ``SessionLog``: one JSON Lines file per participant session plus a metadata file.
+- ``Questionnaire`` with ``Likert``, ``Choice``, ``Text`` and
+  ``Message`` items, shown between episodes.
 
 Needs the rendering dependencies: ``pip install "gridhunt[hat]"``.
 """

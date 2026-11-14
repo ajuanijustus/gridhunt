@@ -400,7 +400,7 @@ def _env_creator(env_config):
 
 
 def list_envs():
-    """IDs of the registered environments, for use with :func:`make`."""
+    """IDs of the registered environments, for use with ``make``."""
     return list(_BENCHMARKS)
 
 
@@ -408,13 +408,13 @@ def make(env_id: str, render_mode: str | None = None, trainable_prey=None, **kwa
     """Create a registered GridHunt environment.
 
     Args:
-        env_id: a registered ID such as ``"GridHunt-ClassicStag-v0"``; see :func:`list_envs`.
+        env_id: a registered ID such as ``"GridHunt-ClassicStag-v0"``; see ``list_envs``.
         render_mode: ``None``, ``"console"``, ``"rgb_array"`` or ``"gui"``.
         trainable_prey: ids of prey to control as agents instead of moving by rule.
         **kwargs: override any setting of the registered scenario (for example
             ``max_steps``, ``observation_mode``, ``reward_mode``, ``predators``); see
-            :class:`GridHunt` for all of them. ``communication=k`` adds a k-token message
-            channel (:class:`CommunicationWrapper`).
+            ``GridHunt`` for all of them. ``communication=k`` adds a k-token message
+            channel (``CommunicationWrapper``).
 
     Returns:
         A PettingZoo ``ParallelEnv``.

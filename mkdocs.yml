@@ -1,0 +1,99 @@
+site_name: GridHunt
+site_description: Heterogeneous, mixed-motive predator-prey environments for multi-agent reinforcement learning and human-agent teaming
+site_url: https://ajuanijustus.github.io/gridhunt/
+repo_url: https://github.com/ajuanijustus/gridhunt
+repo_name: ajuanijustus/gridhunt
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Aju Ani Justus, Chris Baber, Aditya Acharya and Leonardo Stella
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - content.code.copy
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - docs/scripts/gen_pages.py
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            docstring_options:
+              warn_missing_types: false
+            show_source: false
+            show_root_heading: true
+            members_order: source
+            merge_init_into_class: true
+            separate_signature: true
+            show_signature_annotations: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Environments:
+      - environments/index.md
+      - Classic stag hunt: environments/classic_stag.md
+      - Toxic stag: environments/toxic_stag.md
+      - Specialists: environments/specialists.md
+      - Military: environments/military.md
+      - Raid: environments/raid.md
+      - Pig chase: environments/pig_chase.md
+      - Land and sea: environments/land_and_sea.md
+      - Swarm: environments/swarm.md
+  - Guides:
+      - Custom scenarios: guides/custom-scenarios.md
+      - Observations: guides/observations.md
+      - Rendering: guides/rendering.md
+      - Training agents: guides/training.md
+  - Human-agent teaming:
+      - hat/index.md
+      - Sessions: hat/sessions.md
+      - Session logs: hat/logs.md
+      - Questionnaires: hat/questionnaires.md
+      - Running a study: hat/running-a-study.md
+  - Benchmark:
+      - benchmark/index.md
+      - Pretrained teams: benchmark/zoo.md
+  - API reference: api.md
+  - Citing: citing.md
+  - Changelog: changelog.md
