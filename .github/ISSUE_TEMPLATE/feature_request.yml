@@ -1,0 +1,16 @@
+name: Feature or scenario request
+description: Suggest a feature, a scenario or a change to the human-agent teaming toolkit
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What would you like to do?
+      description: The experiment or use case, and what GridHunt is missing for it.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Suggested approach
+      description: Optional. How it could work, or how you work around it today.

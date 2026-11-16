@@ -1,0 +1,107 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SDL_VIDEODRIVER: dummy
+  PYGAME_HIDE_SUPPORT_PROMPT: "1"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ruff>=0.6"
+      - run: ruff check src tests benchmark examples docs
+
+  library:
+    name: library (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      - run: pytest tests
+
+  core-only:
+    # The base install must work without the rendering extras
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install . pytest
+      - name: Import and step every environment without pygame
+        run: |
+          python - <<'EOF'
+          import importlib.util
+          import gridhunt
+          assert importlib.util.find_spec("pygame") is None, "pygame should not be installed"
+          for env_id in gridhunt.list_envs():
+              env = gridhunt.make(env_id)
+              env.reset(seed=0)
+              env.step({agent: 1 for agent in env.agents})
+          print("ok:", gridhunt.__version__)
+          EOF
+      - name: Library tests that need no rendering
+        run: pytest tests --ignore=tests/test_hat.py
+
+  oldest-dependencies:
+    # The oldest versions pyproject.toml allows, which the benchmark itself used
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install "numpy==1.26.4" "gymnasium==0.28.1" "pettingzoo==1.24.2" "pygame-ce==2.5.0" "pygame-gui==0.6.14" "pillow==10.0.0" pytest
+      - run: pip install -e . --no-deps
+      - run: pytest tests
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -e ".[dev,benchmark]"
+      - run: pytest benchmark/tests
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - name: The wheel installs and carries its data files
+        run: |
+          pip install dist/*.whl
+          cd /tmp && python -c "import gridhunt, gridhunt.zoo, pathlib; p = pathlib.Path(gridhunt.__file__).parent; assert (p / 'assets').is_dir() and (p / 'zoo' / 'registry.json').is_file(); print(gridhunt.__version__)"

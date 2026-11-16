@@ -1,0 +1,101 @@
+name: Release
+
+# Run manually to publish a test build to TestPyPI; push a tag such as v1.0.0 to release to PyPI.
+# Both use PyPI trusted publishing, so no tokens are stored in the repository.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - name: Check the tag against the package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(python -c "import re, pathlib; print(re.search(r'__version__ = \"(.+?)\"', pathlib.Path('src/gridhunt/__init__.py').read_text()).group(1))")
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match __version__ ${version}"; exit 1
+          fi
+      - name: A final release must ship the pretrained teams
+        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev')
+        run: |
+          python -c "import json; n = len(json.load(open('src/gridhunt/zoo/registry.json'))['models']); print(n, 'models'); assert n > 0, 'the zoo registry is empty'"
+      - run: python -m build
+      - run: twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/gridhunt
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
+  pypi:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/gridhunt
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    # Publishing a GitHub release is what Zenodo archives (and gives a DOI), so release
+    # candidates get none
+    if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, 'dev')
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; if (index($0, "[" v "]")) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then echo "See CHANGELOG.md." > notes.md; fi
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" dist/* --title "GridHunt ${GITHUB_REF_NAME#v}" --notes-file notes.md

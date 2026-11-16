@@ -1,5 +1,12 @@
 # GridHunt
 
+[![Tests](https://github.com/ajuanijustus/gridhunt/actions/workflows/tests.yml/badge.svg)](https://github.com/ajuanijustus/gridhunt/actions/workflows/tests.yml)
+[![Docs](https://github.com/ajuanijustus/gridhunt/actions/workflows/docs.yml/badge.svg)](https://ajuanijustus.github.io/gridhunt/)
+[![PyPI](https://img.shields.io/pypi/v/gridhunt)](https://pypi.org/project/gridhunt/)
+[![Python](https://img.shields.io/pypi/pyversions/gridhunt)](https://pypi.org/project/gridhunt/)
+[![PettingZoo](https://img.shields.io/badge/PettingZoo-1.27.0-blue)](https://pettingzoo.farama.org)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/ajuanijustus/gridhunt/blob/main/LICENSE)
+
 Heterogeneous, mixed-motive predator-prey environments for multi-agent reinforcement learning
 and human-agent teaming, with a [PettingZoo](https://pettingzoo.farama.org) `ParallelEnv` API.
 Documentation: [ajuanijustus.github.io/gridhunt](https://ajuanijustus.github.io/gridhunt/).
@@ -10,7 +17,7 @@ Documentation: [ajuanijustus.github.io/gridhunt](https://ajuanijustus.github.io/
   control with reaction times, AI teammates, buttons that switch teams of policies, cues only
   the participant sees, questionnaires and per-participant JSON Lines logs.
 - **Baselines:** IPPO, MAPPO and HAPPO over 20 seeds, reported as IQM with 95% bootstrap CIs
-  ([benchmark/](benchmark/README.md)).
+  ([benchmark/](https://github.com/ajuanijustus/gridhunt/blob/main/benchmark/README.md)).
 
 ## Install
 
@@ -76,8 +83,8 @@ session = HumanSession(env, humans={"predator_0": ARROW_KEYS},
                        teammates={"predator_1": team, "predator_2": team})
 ```
 
-[`examples/hitl_play_with_ai.py`](examples/hitl_play_with_ai.py) is a complete version, and
-[`examples/hotl_policy_delegation.py`](examples/hotl_policy_delegation.py) is a human-on-the-loop
+[`examples/hitl_play_with_ai.py`](https://github.com/ajuanijustus/gridhunt/blob/main/examples/hitl_play_with_ai.py) is a complete version, and
+[`examples/hotl_policy_delegation.py`](https://github.com/ajuanijustus/gridhunt/blob/main/examples/hotl_policy_delegation.py) is a human-on-the-loop
 study in which the participant chooses which AI team plays from cues only they can see. Both run
 headless with `--dry-run`.
 
@@ -98,16 +105,16 @@ headless with `--dry-run`.
 
 | Path | Contents |
 |---|---|
-| [`src/gridhunt/`](src/gridhunt) | The installable package |
-| [`benchmark/`](benchmark) | Benchmark protocol, IPPO/MAPPO/HAPPO baselines, analysis and results (not installed) |
-| [`tests/`](tests) | Library tests |
-| [`examples/`](examples) | Runnable examples |
-| [`docs/`](docs) | Documentation site sources (`mkdocs serve` to preview) |
+| [`src/gridhunt/`](https://github.com/ajuanijustus/gridhunt/tree/main/src/gridhunt) | The installable package |
+| [`benchmark/`](https://github.com/ajuanijustus/gridhunt/tree/main/benchmark) | Benchmark protocol, IPPO/MAPPO/HAPPO baselines, analysis and results (not installed) |
+| [`tests/`](https://github.com/ajuanijustus/gridhunt/tree/main/tests) | Library tests |
+| [`examples/`](https://github.com/ajuanijustus/gridhunt/tree/main/examples) | Runnable examples |
+| [`docs/`](https://github.com/ajuanijustus/gridhunt/tree/main/docs) | Documentation site sources (`mkdocs serve` to preview) |
 
 ## Citing
 
-If you use GridHunt, please cite it; see [`CITATION.cff`](CITATION.cff).
+If you use GridHunt, please cite it; see [`CITATION.cff`](https://github.com/ajuanijustus/gridhunt/blob/main/CITATION.cff).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/ajuanijustus/gridhunt/blob/main/LICENSE)

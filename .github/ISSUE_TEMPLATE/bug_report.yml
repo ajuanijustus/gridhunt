@@ -1,0 +1,27 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: A minimal script, with the environment ID and the seed.
+      render: python
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: GridHunt, PettingZoo, Gymnasium and Python versions, and your operating system.
+      placeholder: gridhunt 1.0.0, pettingzoo 1.27.0, gymnasium 1.4.0, Python 3.12, Ubuntu 24.04
+    validations:
+      required: true

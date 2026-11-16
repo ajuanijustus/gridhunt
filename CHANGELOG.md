@@ -31,6 +31,9 @@ First public release.
   scenario) as numpy-only policies, downloaded on first use, checked against SHA-256 hashes and
   cached. A team plays on its own (`team.act(observations)`) or as teammates in a `HumanSession`,
   and `team.make_env()` rebuilds the exact scenario it was trained in.
+- Continuous integration on Linux and macOS with Python 3.10 to 3.13, the oldest supported
+  dependency versions and a base install without rendering, and a release workflow that publishes
+  to PyPI with trusted publishing.
 - Documentation site: scenario pages generated from the registered configurations, guides,
   the human-agent teaming toolkit and its log format, benchmark results and the API reference.
 - Benchmark reproduction: `benchmark/requirements.txt` with the exact library versions behind
@@ -45,6 +48,8 @@ First public release.
 - The SLURM scripts work on any cluster: its account, log folder and environment set-up live in
   `benchmark/slurm/cluster.env`, and scripts are submitted through `benchmark/slurm/submit.sh`.
 - The benchmark documentation is now `benchmark/README.md`.
+- Sprites are stored at 128 × 128 pixels, which shrinks the package from 4 MB to 0.4 MB without
+  visibly changing the rendering; an unused sprite was removed.
 - `GridHunt-PIG-v0` is now `GridHunt-PigChase-v0`. Its dynamics are unchanged.
 - `gridhunt.make()` rejects unknown settings instead of silently ignoring them, and invalid
   observation modes raise an error.
