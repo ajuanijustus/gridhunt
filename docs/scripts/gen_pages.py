@@ -5,7 +5,6 @@ registered scenario configurations, so the pages always match the code.
 """
 
 import csv
-import io
 import os
 import sys
 from pathlib import Path
@@ -18,10 +17,12 @@ import mkdocs_gen_files  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "benchmark"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from animation import scenario_gif  # noqa: E402
 
 import gridhunt  # noqa: E402
 from gridhunt import zoo  # noqa: E402
-from gridhunt.policies import GreedyPolicy  # noqa: E402
 
 SUMMARY = ROOT / "benchmark" / "results" / "summary"
 
@@ -164,25 +165,6 @@ def _benchmark_rows(name):
     return out
 
 
-def _gif(env_id, steps=48, width=360):
-    """An animation of the scripted team playing the scenario (whole board visible)."""
-    from PIL import Image
-
-    env = gridhunt.make(env_id, render_mode="rgb_array", gui_config={"vision_mask": None})
-    env.reset(seed=3)
-    policy = GreedyPolicy()
-    frames = []
-    for _ in range(steps):
-        frame = Image.fromarray(env.render())
-        frames.append(frame.resize((width, int(frame.height * width / frame.width)), Image.NEAREST))
-        env.step({agent: policy(None, agent, env) for agent in env.agents})
-    env.close()
-    buffer = io.BytesIO()
-    frames[0].save(buffer, format="GIF", save_all=True, append_images=frames[1:], duration=180, loop=0,
-                   optimize=True)
-    return buffer.getvalue()
-
-
 def scenario_page(name, info, protocol):
     env_id = info["env_id"]
     config = gridhunt._BENCHMARKS[env_id]
@@ -285,7 +267,7 @@ def main():
             f.write(page)
         mkdocs_gen_files.set_edit_path(f"environments/{name}.md", "../scripts/gen_pages.py")
         with mkdocs_gen_files.open(f"assets/scenarios/{name}.gif", "wb") as f:
-            f.write(_gif(info["env_id"]))
+            f.write(scenario_gif(info["env_id"]))
         config = gridhunt._BENCHMARKS[info["env_id"]]
         first_sentence = info["summary"].split(". ")[0].rstrip(".") + "."
         table.append(f"| [{info['title']}]({name}.md) | `{info['env_id']}` | {config['grid_size'][0]}×"

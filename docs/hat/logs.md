@@ -4,7 +4,7 @@
 from gridhunt.hat import SessionLog
 
 log = SessionLog("hat_logs", participant="P01", condition="berries",
-                 metadata={"experimenter": "AJ"}, log_state=True)
+                 metadata={"experimenter": "E1"}, log_state=True)
 ```
 
 A session writes two files to the folder:

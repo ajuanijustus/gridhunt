@@ -11,6 +11,11 @@ Heterogeneous, mixed-motive predator-prey environments for multi-agent reinforce
 and human-agent teaming, with a [PettingZoo](https://pettingzoo.farama.org) `ParallelEnv` API.
 Documentation: [ajuanijustus.github.io/gridhunt](https://ajuanijustus.github.io/gridhunt/).
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ajuanijustus/gridhunt/main/docs/assets/gridhunt.gif"
+       alt="Four GridHunt scenarios played by the scripted team" width="860">
+</p>
+
 - **Heterogeneous agents:** capture power, vision radius, speed and terrain restrictions are set per agent.
 - **Mixed-motive scenarios:** stag hunts, toxic prey, risky targets, roles that only scout.
 - **Human-agent teaming:** `gridhunt.hat` runs studies with people in or on the loop: keyboard
