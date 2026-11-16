@@ -4,7 +4,7 @@ site_url: https://ajuanijustus.github.io/gridhunt/
 repo_url: https://github.com/ajuanijustus/gridhunt
 repo_name: ajuanijustus/gridhunt
 edit_uri: edit/main/docs/
-copyright: Copyright &copy; 2026 Aju Ani Justus, Chris Baber, Aditya Acharya and Leonardo Stella
+copyright: Copyright &copy; 2026 Aju Ani Justus
 
 theme:
   name: material
