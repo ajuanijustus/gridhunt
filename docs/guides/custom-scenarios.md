@@ -33,7 +33,7 @@ observations, infos = env.reset(seed=0)
 | `speed` | cells moved per step |
 | `limited_vision_radius` with `status={"limited_vision": True}` | the agent observes only cells within this many steps (an egocentric one-hot grid) |
 | `immune_to_terrain` | terrain never blocks or slows the agent |
-| `restricted_terrains` | terrain types the agent can never enter |
+| `restricted_terrains` | terrain types the agent can never enter (immunity does not override this) |
 | `position` | a fixed start cell (random otherwise) |
 | `render_sprite` | the image drawn for it (`gridhunt.assets` has several) |
 
@@ -49,15 +49,17 @@ Prey with `respawn=True` reappear on a random free cell.
 Prey stay still unless `prey_motion` is `"random"` or `"flee"` (away from the nearest predator);
 `prey_move_probability` sets how often they move.
 
-!!! note "Speed and terrain"
-    A move of more than one cell checks only the cell it lands on, so a fast agent can pass over
-    an obstacle between its start and end cells.
+An agent with speed above 1 moves one cell at a time and stops at the grid edge, before any cell it
+cannot enter, and after entering slow terrain.
 
 ## Terrain
 
 Terrain types are given as a dictionary. Each type has a passability (the probability that a move
-into it succeeds; 0 is a wall), an optional speed multiplier and a generation rule: a fixed list of
-cells, or random blobs or walls that are generated anew every episode.
+into it succeeds; 0 is a wall), an optional speed multiplier (below 1, entering the terrain ends
+the move) and a generation rule: a fixed list of cells, or random blobs or walls that are generated
+anew every episode. `restricted_to` keeps agents of the given roles out of a terrain type
+altogether (roles come from `agent_role_map`; by default predators are role 0 and trainable prey
+role 1).
 
 ```python
 import gridhunt

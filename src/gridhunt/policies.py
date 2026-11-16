@@ -3,7 +3,7 @@
 - RandomPolicy: uniform random actions.
 - IdlePolicy: always STILL.
 - GreedyPolicy: each predator walks the shortest path (BFS over the moves it can actually
-  make: speed, impassable terrain, restricted terrains) to the prey with the best reward per
+  make, by the environment's movement rules) to the prey with the best reward per
   step of distance, and waits on it until captured. With its defaults it reads the true state,
   including whether a stag is toxic, so it is an informed heuristic, not an upper bound.
 
@@ -49,40 +49,9 @@ class IdlePolicy(_Policy):
 
 
 def next_position(env, agent, position, action, speed=None):
-    """Deterministic version of GridHunt._move: where an action takes an agent.
-
-    Cells with 0 < passability < 1 are treated as passable (the env may randomly
-    block such a move); impassable and restricted terrain block the move.
-    """
-    speed = agent.speed if speed is None else speed
-    if action == STILL:
-        return position
-    x, y = position
-    width, height = env.grid_size
-    if action == UP:
-        y = max(0, y - speed)
-    elif action == DOWN:
-        y = min(height - 1, y + speed)
-    elif action == LEFT:
-        x = max(0, x - speed)
-    elif action == RIGHT:
-        x = min(width - 1, x + speed)
-    new_position = (x, y)
-    terrain_type = env.terrain_at.get(new_position)
-    if terrain_type is None:
-        return new_position
-    if terrain_type in getattr(agent, "restricted_terrains", set()):
-        return position
-    if getattr(agent, "immune_to_terrain", False):
-        return new_position
-    config = env.terrain_config.get(terrain_type, {})
-    if config.get("passability", 1.0) == 0.0:
-        return position
-    multiplier = config.get("speed_multiplier", 1.0)
-    if multiplier < 1.0:
-        reduced = max(0, int(speed * multiplier))
-        return position if reduced == 0 else next_position(env, agent, position, action, reduced)
-    return new_position
+    """Where an action takes an agent, by the environment's own movement rules without
+    randomness: a cell that can be entered with some probability counts as reachable."""
+    return env._move(position, action, agent=agent, speed=speed, stochastic=False)
 
 
 def shortest_paths(env, agent):

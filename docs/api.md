@@ -8,7 +8,7 @@
 
 ::: gridhunt.core.GridHunt
     options:
-      members: [reset, step, state, render, close, set_entities, set_prey, observation_space, action_space]
+      members: [reset, step, state, action_mask, render, close, set_entities, set_prey, observation_space, action_space]
 
 ::: gridhunt.wrappers.CommunicationWrapper
     options:

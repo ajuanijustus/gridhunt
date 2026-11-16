@@ -9,6 +9,10 @@ results; ``tests/test_regression.py`` replays every case and compares.
 A mismatch means an environment's dynamics, rewards or observations changed. That is only
 allowed together with a new environment version suffix (``-v0`` to ``-v1``), a CHANGELOG
 entry and newly recorded references for the new version.
+
+One case was re-recorded before the first release: ``Military/encoders_coords``, when the
+optional ``action_mask`` encoder learned that the UAV ignores terrain. No registered
+configuration and no benchmark configuration changed.
 """
 
 import copy

@@ -38,12 +38,12 @@ reward and clipped to [-1, 1]; the last action is a one-hot vector of length 5.
 | Encoder | Adds |
 |---|---|
 | `"agent_centric"` | a one-hot code of the agent's role (8 values). Roles are predator and trainable prey unless `agent_role_map` assigns them, for example `{"scouts": ["scout_0"], "bruisers": ["bruiser_0"]}` |
-| `"action_mask"` | 5 values: whether each move stays on the grid and out of impassable terrain |
+| `"action_mask"` | 5 values: whether each action moves the agent (stay is always valid) |
 
 With `use_action_mask=True` the same masks are also reported in
-`infos["__common__"]["action_masks"]`. The mask considers the grid edges, impassable terrain and
-terrain types restricted by the terrain configuration's `restricted_to`; it does not account for an
-agent's own `restricted_terrains`, terrain immunity or speed.
+`infos["__common__"]["action_masks"]`, and `env.action_mask(agent_id)` returns one on demand. A mask
+follows the movement rules: the grid edges, impassable terrain, the agent's terrain restrictions and
+immunity, and its speed. Terrain that blocks a move only with some probability counts as reachable.
 
 ## Global state
 

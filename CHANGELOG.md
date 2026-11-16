@@ -60,6 +60,12 @@ First public release.
   entities, so their dynamics are unchanged.
 
 ### Fixed
+- Moves of more than one cell checked only the landing cell, so fast agents could jump walls; they
+  now move one cell at a time. Slow terrain can be entered (it ends the move) instead of blocking
+  agents of speed 1. No registered scenario is affected.
+- Action masks ignored an agent's own terrain restrictions, terrain immunity and speed, and the
+  terrain setting `restricted_to` affected only masks, not movement. Movement and masks now
+  follow one set of rules, and `env.action_mask(agent_id)` returns an agent's mask.
 - `CommunicationWrapper.unwrapped` returned the wrapper instead of the environment underneath.
 - `env.render()` raised `NotImplementedError`, and `render_mode="rgb_array"` was accepted but
   drew nothing.

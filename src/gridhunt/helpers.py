@@ -24,55 +24,6 @@ def encode_agent_centric(
     return np.concatenate([base_obs, agent_encoding]).astype(np.float32)
 
 
-def create_action_mask(
-    agent_position: tuple[int, int],
-    grid_size: tuple[int, int],
-    restricted_terrains: set[str] | None = None,
-    terrain_at: dict[tuple[int, int], str] | None = None,
-    terrain_config: dict[str, dict[str, Any]] | None = None,
-) -> np.ndarray:
-    """Return a 5-action validity mask."""
-    if not isinstance(agent_position, tuple) or len(agent_position) != 2:
-        raise TypeError(
-            f"agent_position must be tuple of length 2, got {agent_position}"
-        )
-    if not isinstance(grid_size, tuple) or len(grid_size) != 2:
-        raise TypeError(f"grid_size must be tuple of length 2, got {grid_size}")
-    if grid_size[0] <= 0 or grid_size[1] <= 0:
-        raise ValueError(f"grid_size must be positive, got {grid_size}")
-
-    terrain_at = terrain_at or {}
-    terrain_config = terrain_config or {}
-    restricted_terrains = restricted_terrains or set()
-
-    mask = np.ones(5, dtype=np.float32)
-    x, y = agent_position
-    width, height = grid_size
-
-    checks = {
-        1: (x, y - 1),  # UP
-        2: (x, y + 1),  # DOWN
-        3: (x - 1, y),  # LEFT
-        4: (x + 1, y),  # RIGHT
-    }
-
-    for action, (tx, ty) in checks.items():
-        if not (0 <= tx < width and 0 <= ty < height):
-            mask[action] = 0.0
-            continue
-        pos = (tx, ty)
-        terrain_type = terrain_at.get(pos)
-        if terrain_type is None:
-            continue
-        if terrain_type in restricted_terrains:
-            mask[action] = 0.0
-            continue
-        if terrain_config.get(terrain_type, {}).get("passability", 1.0) == 0.0:
-            mask[action] = 0.0
-
-    return mask
-
-
 def detect_agent_types(
     predator_ids: set[str],
     trainable_prey: set[str],
@@ -124,30 +75,6 @@ def gather_all_entity_positions(
             if hasattr(entity_obj, "position") and entity_obj.position is not None:
                 positions[entity_id] = entity_obj.position
     return positions
-
-
-def validate_action_mask(mask: np.ndarray, agent_id: str) -> None:
-    """Validate mask format for policy consumers."""
-    if not isinstance(mask, np.ndarray):
-        raise TypeError(
-            f"Agent {agent_id}: action_mask must be numpy array, got {type(mask)}"
-        )
-    if mask.shape != (5,):
-        raise ValueError(
-            f"Agent {agent_id}: action_mask shape must be (5,), got {mask.shape}"
-        )
-    if mask.dtype != np.float32:
-        raise ValueError(
-            f"Agent {agent_id}: action_mask dtype must be float32, got {mask.dtype}"
-        )
-    if not np.all((mask == 0.0) | (mask == 1.0)):
-        raise ValueError(
-            f"Agent {agent_id}: action_mask values must be 0.0 or 1.0, got {mask}"
-        )
-    if not np.any(mask == 1.0):
-        raise ValueError(
-            f"Agent {agent_id}: action_mask has no valid actions (all zeros)"
-        )
 
 
 def calculate_observation_size(

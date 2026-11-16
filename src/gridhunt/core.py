@@ -20,6 +20,7 @@ REWARD_MODES = ("individual", "team")
 PREY_MOTIONS = ("static", "random", "flee")
 
 MOVES = [STILL, UP, DOWN, LEFT, RIGHT]
+_DELTAS = {UP: (0, -1), DOWN: (0, 1), LEFT: (-1, 0), RIGHT: (1, 0)}
 
 
 class GridHunt(ParallelEnv):
@@ -470,36 +471,7 @@ class GridHunt(ParallelEnv):
 
         action_masks = None
         if self.use_action_mask:
-            action_masks = {}
-            for agent_id in self._agent_ids:
-                if agent_id in self.predators:
-                    agent_pos = self.predators[agent_id].position
-                elif agent_id in self.prey:
-                    agent_pos = self.prey[agent_id].position
-                else:
-                    continue
-
-                restricted_terrains = set()
-                agent_type = self.agent_types.get(agent_id, 0)
-                for terrain_type, config in self.terrain_config.items():
-                    restricted_types = config.get("restricted_to", set())
-                    if agent_type in restricted_types:
-                        restricted_terrains.add(terrain_type)
-
-                try:
-                    mask = helpers.create_action_mask(
-                        agent_pos,
-                        self.grid_size,
-                        restricted_terrains=restricted_terrains,
-                        terrain_at=self.terrain_at,
-                        terrain_config=self.terrain_config,
-                    )
-                    helpers.validate_action_mask(mask, agent_id)
-                    action_masks[agent_id] = mask
-                except (ValueError, RuntimeError) as e:
-                    raise RuntimeError(
-                        f"Failed to generate action mask for agent {agent_id}: {e}"
-                    ) from e
+            action_masks = {agent_id: self.action_mask(agent_id) for agent_id in self._agent_ids}
 
         infos["__common__"] = {
             "prey_positions": {
@@ -937,51 +909,87 @@ class GridHunt(ParallelEnv):
             [other_pos[0] - agent_pos[0], other_pos[1] - agent_pos[1]], dtype=np.int32
         )
 
-    def _move(self, position, action, agent=None, speed=None):
-        """Move an agent one step with terrain rules."""
-        if speed is None and agent is not None:
-            speed = agent.speed
-        elif speed is None:
-            speed = 1
-        if action == STILL:
-            return position
+    def _is_restricted(self, agent, terrain_type):
+        """Whether an agent may never enter a terrain type.
 
-        x, y = position
-        new_x, new_y = x, y
+        Two settings restrict terrain: an agent's own ``restricted_terrains``, and a terrain
+        type's ``restricted_to``, a collection of agent roles (see ``agent_role_map``).
+        """
+        if terrain_type in getattr(agent, "restricted_terrains", ()):
+            return True
+        roles = self.terrain_config.get(terrain_type, {}).get("restricted_to")
+        if not roles or agent is None:
+            return False
+        agent_id = getattr(agent, "predator_id", None) or getattr(agent, "prey_id", None)
+        return agent_id in self.agent_types and self.agent_types[agent_id] in roles
 
-        if action == UP:
-            new_y = max(0, y - speed)
-        elif action == DOWN:
-            new_y = min(self.grid_size[1] - 1, y + speed)
-        elif action == LEFT:
-            new_x = max(0, x - speed)
-        elif action == RIGHT:
-            new_x = min(self.grid_size[0] - 1, x + speed)
+    def _enter(self, cell, agent, stochastic):
+        """Whether an agent can step into a cell, and whether its move ends there.
 
-        new_pos = (new_x, new_y)
-
-        if new_pos in self.terrain_at:
-            terrain_type = self.terrain_at[new_pos]
-            agent_restricted = getattr(agent, "restricted_terrains", set())
-            if terrain_type in agent_restricted:
-                return position
-
-        if new_pos in self.terrain_at and not self._is_agent_immune_to_terrain(agent):
-            terrain_type = self.terrain_at[new_pos]
-            terrain_config = self.terrain_config.get(terrain_type, {})
-            passability = terrain_config.get("passability", 1.0)
-            speed_multiplier = terrain_config.get("speed_multiplier", 1.0)
-
+        With ``stochastic`` the passability roll uses the environment's generator; without it
+        (for action masks and planning) any cell that is not impassable counts as enterable.
+        """
+        terrain_type = self.terrain_at.get(cell)
+        if terrain_type is None:
+            return True, False
+        if self._is_restricted(agent, terrain_type):
+            return False, True
+        if self._is_agent_immune_to_terrain(agent):
+            return True, False
+        config = self.terrain_config.get(terrain_type, {})
+        passability = config.get("passability", 1.0)
+        if stochastic:
             if self._py_rng.random() >= passability:
-                return position
+                return False, True
+        elif passability == 0.0:
+            return False, True
+        # Slow terrain can be entered but ends the move
+        return True, config.get("speed_multiplier", 1.0) < 1.0
 
-            if speed_multiplier < 1.0:
-                reduced_speed = max(0, int(speed * speed_multiplier))
-                if reduced_speed == 0:
-                    return position
-                return self._move(position, action, agent=agent, speed=reduced_speed)
+    def _move(self, position, action, agent=None, speed=None, stochastic=True):
+        """Where an action takes an agent: up to ``speed`` cells, one at a time.
 
-        return new_pos
+        The agent stops at the grid edge and before the first cell it cannot enter (an
+        impassable or restricted cell, or a failed passability roll), and after entering a cell
+        with a speed multiplier below 1.
+        """
+        if speed is None:
+            speed = agent.speed if agent is not None else 1
+        delta = _DELTAS.get(action)
+        if delta is None:
+            return position
+        current = position
+        for step in range(speed):
+            nxt = (
+                min(max(current[0] + delta[0], 0), self.grid_size[0] - 1),
+                min(max(current[1] + delta[1], 0), self.grid_size[1] - 1),
+            )
+            if nxt == current:
+                if step == 0 and stochastic:
+                    # A move into the grid edge still makes the passability roll for the agent's
+                    # own cell, as -v0 always has; dropping it would change every later draw
+                    self._enter(current, agent, stochastic)
+                break
+            can_enter, stop = self._enter(nxt, agent, stochastic)
+            if not can_enter:
+                break
+            current = nxt
+            if stop:
+                break
+        return current
+
+    def action_mask(self, agent_id):
+        """Which of the 5 actions move the agent (stay is always valid), as float32 0/1 values.
+
+        Uses the movement rules without randomness: a cell that can be entered with some
+        probability counts as reachable.
+        """
+        agent = self.predators.get(agent_id) or self.prey.get(agent_id)
+        mask = np.ones(5, dtype=np.float32)
+        for action in (UP, DOWN, LEFT, RIGHT):
+            if self._move(agent.position, action, agent=agent, stochastic=False) == agent.position:
+                mask[action] = 0.0
+        return mask
 
     def _find_random_valid_coord(self):
         """Return a free in-bounds coordinate."""
@@ -1051,28 +1059,7 @@ class GridHunt(ParallelEnv):
                     )
 
                 elif encoder_name == "action_mask":
-                    if agent_id in self.predators:
-                        agent_pos = self.predators[agent_id].position
-                    elif agent_id in self.prey:
-                        agent_pos = self.prey[agent_id].position
-                    else:
-                        raise RuntimeError(f"Unknown agent: {agent_id}")
-
-                    restricted_terrains = set()
-                    agent_type = self.agent_types.get(agent_id, 0)
-                    for terrain_type, config in self.terrain_config.items():
-                        restricted_types = config.get("restricted_to", set())
-                        if agent_type in restricted_types:
-                            restricted_terrains.add(terrain_type)
-
-                    mask = helpers.create_action_mask(
-                        agent_pos,
-                        self.grid_size,
-                        restricted_terrains=restricted_terrains,
-                        terrain_at=self.terrain_at,
-                        terrain_config=self.terrain_config,
-                    )
-                    obs = np.concatenate([obs, mask]).astype(np.float32)
+                    obs = np.concatenate([obs, self.action_mask(agent_id)]).astype(np.float32)
 
             except Exception as e:
                 raise RuntimeError(
