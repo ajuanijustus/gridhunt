@@ -35,7 +35,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Pygame window, rgb_array frames and the interactive GUI
-render = ["pygame-ce>=2.5", "pygame-gui>=0.6.14", "pillow>=10"]
+render = ["pygame-ce>=2.5.3", "pygame-gui>=0.6.14", "pillow>=10"]
 # Human-agent teaming studies (session runner, logging, questionnaires)
 hat = ["gridhunt[render]"]
 # Baselines and analysis in benchmark/ (not part of the installed package)
