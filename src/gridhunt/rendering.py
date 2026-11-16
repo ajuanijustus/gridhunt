@@ -36,15 +36,19 @@ class Renderer:
     EDGE_PADDING = 10
     ROW_SPACING = 10
     DROPDOWN_DEFAULT_WIDTH = 100
-    TILE_SIZE = 32
+    TILE_SIZE = 32  # replaced per environment by the cell size that fits BOARD_SIZE
+    BOARD_SIZE = 640  # target board width and height in pixels
+    MIN_TILE_SIZE = 12
+    MARGIN = 16  # space around the board, the same on every side
+    GRID_LINE_WIDTH = 2
     GAMEBOARD_COLOR = (255, 185, 137)
     BACKGROUND_COLOR = (20, 20, 20)
     CLEAR = (0, 0, 0, 0)
     GRID_LINE_COLOR = (200, 150, 100, 200)
     SCREEN_SIZE = (750, 750)
 
-    # Grid rendering
-    GRID_BOUNDARY_BUFFER = 1
+    # Grid rendering: room for the right and bottom border lines
+    GRID_BOUNDARY_BUFFER = GRID_LINE_WIDTH
 
     def __init__(self, env, gui_config: dict | None = None) -> None:
         """Initialize renderer state."""
@@ -82,7 +86,7 @@ class Renderer:
         info_text_lines = max(1, int(self.gui_config.get("info_text_lines", 1)))
 
         layout = {
-            "required_width": self.SCREEN_SIZE[0],
+            "required_width": self._min_width,
             "text_vertical_space": self.TEXT_PADDING
             + self._text_height * info_text_lines
             + self.TEXT_PADDING,
@@ -112,9 +116,7 @@ class Renderer:
                 rect = pygame.Rect(dd_conf["rect"])
                 x_offset = max(x_offset, rect.right + self.EDGE_PADDING)
 
-        layout["required_width"] = max(
-            self.SCREEN_SIZE[0], x_offset + self.EDGE_PADDING
-        )
+        layout["required_width"] = max(self._min_width, x_offset + self.EDGE_PADDING)
 
         # Calculate info bar height
         buttons = self.gui_config.get("buttons", [])
@@ -147,15 +149,17 @@ class Renderer:
         pygame.init()
         os.environ["SDL_VIDEO_WINDOW_POS"] = "0,0"
 
-        # Calculate game surface dimensions on grid
+        # Every board is drawn at one cell size chosen to fill about BOARD_SIZE pixels, so boards,
+        # margins and grid lines look the same whatever the grid size
+        self.TILE_SIZE = max(self.MIN_TILE_SIZE, self.BOARD_SIZE // max(self.env.grid_size))
+        self._scale = 1
         self._game_surface_size = (
             self.env.grid_size[0] * self.TILE_SIZE,
             self.env.grid_size[1] * self.TILE_SIZE,
         )
-
-        # Calculate scale factor to fit screen width
-        scale_x = self.SCREEN_SIZE[0] // self._game_surface_size[0]
-        self._scale = max(1, scale_x)
+        board_width = self._game_surface_size[0] + self.GRID_BOUNDARY_BUFFER
+        board_height = self._game_surface_size[1] + self.GRID_BOUNDARY_BUFFER
+        self._min_width = board_width + 2 * self.MARGIN
 
         # Initialize font and measure text height
         if self.info_bar:
@@ -168,23 +172,14 @@ class Renderer:
         else:
             self._text_height = 0
             self._info_bar_height = 0
-            required_width = self.SCREEN_SIZE[0]
+            required_width = self._min_width
 
-        # Calculate final screen size using the full available space
-        scaled_game_board_height = self._game_surface_size[1] * self._scale
-
-        # Center game board horizontally and vertically (same offset for uniform padding)
-        scaled_game_board_width = self._game_surface_size[0] * self._scale
-        self._board_x_offset = (required_width - scaled_game_board_width) // 2
-        self._board_y_offset = self._board_x_offset
-
-        self._screen_size = (
-            required_width,
-            self._board_y_offset + scaled_game_board_height + self._info_bar_height,
-        )
-
-        # Position info bar immediately after game board
-        self._info_bar_y = self._board_y_offset + scaled_game_board_height
+        # The board is centred horizontally (buttons can make the window wider) with an equal
+        # margin above and below it; the info bar sits under the bottom margin
+        self._board_x_offset = (required_width - board_width) // 2
+        self._board_y_offset = self.MARGIN
+        self._info_bar_y = self.MARGIN + board_height + self.MARGIN
+        self._screen_size = (required_width, self._info_bar_y + self._info_bar_height)
 
         # Create display and clock
         self._screen = pygame.display.set_mode(self._screen_size, pygame.HIDDEN if hidden else 0)
@@ -205,14 +200,15 @@ class Renderer:
         self._grid_layer = pygame.Surface(padded_grid_size).convert_alpha()
         self._grid_layer.fill(self.CLEAR)
 
-        # Dynamic entity layer for prey, predators, and obstacles
+        # Terrain (under the grid lines) and entities, prey and predators (over them)
+        self._terrain_layer = pygame.Surface(self._game_surface_size).convert_alpha()
         self._entity_layer = pygame.Surface(self._game_surface_size).convert_alpha()
         self._entity_layer.fill(self.CLEAR)
 
         # Info bar background
         if self.info_bar:
             self._info_layer = pygame.Surface(
-                (self._game_surface_size[0], self._info_bar_height)
+                (self._screen_size[0], self._info_bar_height)
             ).convert()
             self._info_layer.fill(self.BACKGROUND_COLOR)
 
@@ -337,22 +333,8 @@ class Renderer:
         """
         Draw the scaled game board, centered, and the optional info bar onto the screen surface.
         """
-        # Build complete game board with all layers
-        game_board = self._build_game_board()
-
-        # Scale game board ONLY (info bar stays unscaled)
-        # Might be worth trying smoothscale() instead of scale for larger grids
-        scaled_board = pygame.transform.scale(
-            game_board,
-            (
-                int(self._game_surface_size[0] * self._scale),
-                int(self._game_surface_size[1] * self._scale),
-            ),
-        )
-
-        # Clear screen and draw scaled game board CENTERED horizontally and same offset to top for uniformity
         self._screen.fill(self.BACKGROUND_COLOR)
-        self._screen.blit(scaled_board, (self._board_x_offset, self._board_y_offset))
+        self._screen.blit(self._build_game_board(), (self._board_x_offset, self._board_y_offset))
 
         # Render info bar and UI if enabled
         if self.info_bar:
@@ -414,17 +396,17 @@ class Renderer:
 
     def _build_game_board(self) -> pygame.Surface:
         """
-        Compose the complete game board from background, grid, and entity layers.
-
-        Returns the layered board ready for scaling and display. Grid lines are
-        rendered on a slightly padded surface to accommodate boundary lines.
+        Compose the board from its layers: background, terrain, grid lines, then entities, prey
+        and predators. The board is GRID_LINE_WIDTH pixels larger than the cells so the right and
+        bottom border lines fit.
 
         Returns:
             pygame.Surface: The composed game board with all layers rendered
         """
         self._entity_layer.fill(self.CLEAR)
+        self._terrain_layer.fill(self.CLEAR)
 
-        # Draw terrain (background layer, drawn first)
+        # Terrain goes under the grid lines
         if hasattr(self.env, "terrain") and self.env.terrain:
             for terrain_entity in self.env.terrain.values():
                 sprite = self._get_cached_sprite(terrain_entity.render_sprite)
@@ -432,7 +414,7 @@ class Renderer:
                     terrain_entity.position[0] * self.TILE_SIZE,
                     terrain_entity.position[1] * self.TILE_SIZE,
                 )
-                self._entity_layer.blit(sprite, pos)
+                self._terrain_layer.blit(sprite, pos)
 
         # Draw static obstacles/background entities
         if self.env.entities is not None:
@@ -462,7 +444,7 @@ class Renderer:
             )
             self._entity_layer.blit(sprite, pos)
 
-        # Layer composition: background + grid (with boundary buffer) + entities + vision mask
+        # Layer composition: background, terrain, grid lines, entities, vision mask
         padded_size = (
             self._game_surface_size[0] + self.GRID_BOUNDARY_BUFFER,
             self._game_surface_size[1] + self.GRID_BOUNDARY_BUFFER,
@@ -470,6 +452,7 @@ class Renderer:
         board = pygame.Surface(padded_size).convert()
         board.fill(self.GAMEBOARD_COLOR)
         board.blit(self._game_surface, (0, 0))
+        board.blit(self._terrain_layer, (0, 0))
         board.blit(self._grid_layer, (0, 0))
         board.blit(self._entity_layer, (0, 0))
 
@@ -570,9 +553,7 @@ class Renderer:
                 sprite = self._load_image(path_str)
                 # Ensure sprite fits within a single grid cell
                 if sprite.get_size() != (self.TILE_SIZE, self.TILE_SIZE):
-                    sprite = pygame.transform.scale(
-                        sprite, (self.TILE_SIZE, self.TILE_SIZE)
-                    )
+                    sprite = pygame.transform.smoothscale(sprite, (self.TILE_SIZE, self.TILE_SIZE))
                 self._sprite_cache[path_str] = sprite
             except (FileNotFoundError, pygame.error, OSError) as e:
                 # Fallback: return blank surface instead of crashing
@@ -617,37 +598,15 @@ class Renderer:
         pygame.quit()
 
     def _draw_grid(self) -> None:
-        """
-        Draw grid lines on the static grid layer.
-
-        Grid lines are drawn once during initialization and scaled based on the
-        zoom level to remain visible at all scales. Line width is proportional
-        to the scale factor to maintain visual consistency.
-        """
+        """Draw the grid lines, including the outer border, once on the static grid layer."""
         w, h = self.env.grid_size
-
-        # Scale line width with zoom (thicker at higher zooms, minimum 1px)
-        line_width = max(1, int(self._scale * 0.25))
-
-        # Draw vertical lines
-        for x in range(0, (w + 1) * self.TILE_SIZE, self.TILE_SIZE):
-            pygame.draw.line(
-                self._grid_layer,
-                self.GRID_LINE_COLOR,
-                (x, 0),
-                (x, h * self.TILE_SIZE),
-                line_width,
-            )
-
-        # Draw horizontal lines
-        for y in range(0, (h + 1) * self.TILE_SIZE, self.TILE_SIZE):
-            pygame.draw.line(
-                self._grid_layer,
-                self.GRID_LINE_COLOR,
-                (0, y),
-                (w * self.TILE_SIZE, y),
-                line_width,
-            )
+        width = self.GRID_LINE_WIDTH
+        for x in range(w + 1):
+            self._grid_layer.fill(self.GRID_LINE_COLOR, pygame.Rect(x * self.TILE_SIZE, 0, width,
+                                                                   h * self.TILE_SIZE + width))
+        for y in range(h + 1):
+            self._grid_layer.fill(self.GRID_LINE_COLOR, pygame.Rect(0, y * self.TILE_SIZE,
+                                                                   w * self.TILE_SIZE + width, width))
 
     def _load_image(self, path: str, clean_image: bool = False) -> pygame.Surface:
         """

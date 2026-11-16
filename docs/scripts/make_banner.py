@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from animation import frames, gif_bytes  # noqa: E402
+from animation import frames, gif_bytes, shared_palette  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets"
 BACKGROUND = (20, 20, 20)
@@ -43,12 +43,7 @@ def montage(tile=200, gap=12, label_height=28, steps=40):
             text_width = draw.textlength(title, font=font)
             draw.text((x + (tile - text_width) / 2, gap + tile + 6), title, fill=MUTED, font=font)
         out.append(canvas)
-    # One palette for every frame, without dithering, keeps the file small and the colours steady
-    sample = Image.new("RGB", (width, height * 4))
-    for row, step in enumerate(range(0, steps, max(1, steps // 4))[:4]):
-        sample.paste(out[step], (0, row * height))
-    palette = sample.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
-    return [frame.quantize(palette=palette, dither=Image.Dither.NONE) for frame in out]
+    return shared_palette(out)
 
 
 def social_preview(tile=280, gap=30):

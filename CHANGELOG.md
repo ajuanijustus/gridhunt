@@ -48,6 +48,8 @@ First public release.
 - The SLURM scripts work on any cluster: its account, log folder and environment set-up live in
   `benchmark/slurm/cluster.env`, and scripts are submitted through `benchmark/slurm/submit.sh`.
 - The benchmark documentation is now `benchmark/README.md`.
+- Rendering draws every board at a cell size that fills about 640 pixels, with the same margin on
+  every side and grid lines of one width, instead of scaling 32-pixel cells by whole numbers.
 - Sprites are stored at 128 × 128 pixels, which shrinks the package from 4 MB to 0.4 MB without
   visibly changing the rendering; an unused sprite was removed.
 - `GridHunt-PIG-v0` is now `GridHunt-PigChase-v0`. Its dynamics are unchanged.
