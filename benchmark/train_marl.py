@@ -166,7 +166,7 @@ def main():
         interval_steps += steps_per_iteration
 
         if iteration % args.checkpoint_every == 0:
-            torch.save({
+            save_atomic({
                 "learner": learner.state_dict(), "iteration": iteration, "env_steps": env_steps,
                 "wall_time_s": time.time() - start, "next_eval": next_eval, "floor_updates": floor_updates,
                 "python_rng": random.getstate(), "numpy_rng": np.random.get_state(),
@@ -174,9 +174,9 @@ def main():
             }, checkpoint_path)
     progress_file.close()
 
-    torch.save({"learner": learner.state_dict(), "agents": agents, "obs_dims": obs_dims, "action_dims": action_dims,
-                "state_dim": probe.state_space.shape[0],
-                "config": dataclasses.asdict(config)}, out / "model.pt")
+    save_atomic({"learner": learner.state_dict(), "agents": agents, "obs_dims": obs_dims, "action_dims": action_dims,
+                 "state_dim": probe.state_space.shape[0],
+                 "config": dataclasses.asdict(config)}, out / "model.pt")
     returns, captures = evaluate(learner, env_fn, args.final_eval_episodes, EVAL_SEED_OFFSET)
     greedy_returns, greedy_captures = evaluate(learner, env_fn, args.final_eval_episodes, EVAL_SEED_OFFSET, greedy=True)
     final = {
@@ -189,9 +189,22 @@ def main():
         "git_commit": git_commit(), "python": platform.python_version(), "torch": torch.__version__,
         "numpy": np.__version__, "host": platform.node(), "slurm_job": os.environ.get("SLURM_JOB_ID"),
     }
-    (out / "final.json").write_text(json.dumps(final, indent=2))
+    save_atomic(json.dumps(final, indent=2), out / "final.json")
     checkpoint_path.unlink(missing_ok=True)
     print(f"Done: final eval {final['final_eval_return_mean']:.2f} over {len(returns)} episodes -> {out}")
+
+
+def save_atomic(obj, path):
+    """Write a file in one step, so a job killed mid-write never leaves a truncated checkpoint.
+
+    ``obj`` is text (written as is) or anything ``torch.save`` accepts.
+    """
+    tmp = path.with_name(path.name + ".tmp")
+    if isinstance(obj, str):
+        tmp.write_text(obj)
+    else:
+        torch.save(obj, tmp)
+    os.replace(tmp, path)
 
 
 if __name__ == "__main__":
