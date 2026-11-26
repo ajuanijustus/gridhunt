@@ -1,6 +1,6 @@
 """GridHunt: heterogeneous, mixed-motive predator-prey environments with a PettingZoo API."""
 
-__version__ = "1.0.0rc1"
+__version__ = "1.0.0rc2"
 
 import copy
 import functools

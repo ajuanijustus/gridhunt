@@ -24,6 +24,7 @@ from gridhunt.hat import (  # noqa: E402
     Likert,
     Message,
     Questionnaire,
+    Scale,
     SessionLog,
     Text,
     read_log,
@@ -195,6 +196,114 @@ def test_quit_key_ends_the_session(tmp_path):
     assert session.quit_requested and session.run_episode(seed=1) is None
     session.close()
     assert records(log, "session_end")[0]["quit"] is True
+
+
+def test_an_episode_can_wait_for_a_rating_and_disabled_buttons_are_ignored(tmp_path):
+    env = gridhunt.make("GridHunt-ToxicStag-v0")
+    log = SessionLog(tmp_path)
+
+    def rate(session):
+        session.set_button_enabled("High", False)
+        session.resume()
+
+    frames = [[], [], [button("High")], [button("High")]]
+    session = HumanSession(env, teams=_toxic_teams(), step_interval=0.0, log=log, headless=True, pause_button=False,
+                           buttons=[Button("High", rate)], event_source=Script(frames))
+    result = session.run_episode(seed=0, max_steps=3, start_paused=True)
+    session.close()
+
+    events = records(log, "event")
+    assert [e["name"] for e in events] == ["pause", "button", "resume", "button"]
+    assert events[0]["step"] == 0 and events[2]["step"] == 0  # nothing stepped before the rating
+    assert events[3]["accepted"] is False  # pressed again once disabled: ignored
+    assert result.steps == 3
+    assert all(e["episode_t"] >= 0 for e in events)
+    assert events[1]["episode_t"] <= events[3]["episode_t"]
+
+
+def test_episode_t_counts_from_each_episode_start(tmp_path):
+    env = gridhunt.make("GridHunt-ToxicStag-v0")
+    log = SessionLog(tmp_path)
+    session = HumanSession(env, teams=_toxic_teams(), step_interval=0.0, log=log, headless=True,
+                           event_source=Script([[button("HareTeam")]]))
+    session.log_event("before")  # no episode yet
+    session.run_episode(seed=0, max_steps=2)
+    session.event_source = Script([[], [button("StagTeam")]])
+    session.run_episode(seed=1, max_steps=2)
+    session.close()
+
+    events = {e["name"] + str(e["episode"]): e for e in records(log, "event")}
+    assert events["before-1"]["episode_t"] is None
+    starts = {r["episode"]: r["t"] for r in records(log, "episode_start")}
+    for e in records(log, "event"):
+        if e["episode"] >= 0:
+            assert e["episode_t"] == pytest.approx(e["t"] - starts[e["episode"]], abs=2e-3)
+
+
+def test_key_bindings_and_reset_board_keep_the_episode_going(tmp_path):
+    env = gridhunt.make("GridHunt-ClassicStag-v0")
+    log = SessionLog(tmp_path)
+    teammates = {a: GreedyPolicy() for a in env.possible_agents}
+    frames = [[], [], [], [key(pygame.K_r)]]
+    session = HumanSession(env, teammates=teammates, step_interval=0.0, log=log, headless=True,
+                           keys={pygame.K_r: lambda s: s.reset_board()}, event_source=Script(frames))
+    result = session.run_episode(seed=3, max_steps=6)
+    session.close()
+
+    events = records(log, "event")
+    assert [e["name"] for e in events] == ["key", "reset_board"]
+    assert events[0]["key"] == "r" and events[1]["step"] == 3
+    steps = records(log, "step")
+    assert [s["step"] for s in steps] == list(range(6))  # one episode, step count carries on
+    assert result.steps == 6 and len(records(log, "episode_start")) == 1
+    assert events[1]["positions"] != steps[2]["positions"]  # everyone placed again
+    assert session.last_rewards == steps[-1]["rewards"]
+
+
+def test_key_bindings_cannot_take_reserved_keys():
+    env = gridhunt.make("GridHunt-ClassicStag-v0")
+    with pytest.raises(ValueError, match="already used"):
+        HumanSession(env, humans={"predator_0": ARROW_KEYS}, teammates={"predator_1": IdlePolicy()},
+                     keys={pygame.K_UP: lambda s: None}, headless=True)
+    with pytest.raises(ValueError, match="already used"):
+        HumanSession(env, teammates={a: IdlePolicy() for a in env.possible_agents},
+                     keys={pygame.K_ESCAPE: lambda s: None}, headless=True)
+    session = HumanSession(env, teammates={a: IdlePolicy() for a in env.possible_agents}, headless=True)
+    with pytest.raises(ValueError, match="unknown button"):
+        session.set_button_enabled("Nope", False)
+    session.close()
+
+
+def test_scale_needs_the_handle_moved_and_snaps_to_its_steps(tmp_path):
+    env = gridhunt.make("GridHunt-ClassicStag-v0")
+    log = SessionLog(tmp_path)
+    questionnaire = Questionnaire([Scale("mental", "How mentally demanding was the task?", 0, 100, 5),
+                                   Scale("effort", "Effort?", 0, 100, 5, show_value=True)])
+
+    def move(value):
+        def frame():
+            questionnaire.current_widgets["slider"].set_current_value(value)
+            return []
+        return frame
+
+    frames = [
+        [button("Next")],  # not moved yet: ignored
+        move(72.4), [], [button("Next")],
+        move(13), [], [button("Next")],
+    ]
+    session = HumanSession(env, teammates={a: IdlePolicy() for a in env.possible_agents}, log=log, headless=True,
+                           event_source=Script(frames))
+    answers = session.ask(questionnaire)
+    session.close()
+    assert answers == {"mental": 70, "effort": 15}
+    assert records(log, "questionnaire")[0]["answers"] == answers
+
+    item = Scale("x", "?", 0, 10, 0.5)
+    assert item.snap(3.3) == 3.5 and item.snap(-4) == 0 and item.snap(99) == 10
+    with pytest.raises(ValueError, match="Scale"):
+        Questionnaire([Scale("bad", "?", 0, 100, 7)])
+    with pytest.raises(ValueError, match="Scale"):
+        Questionnaire([Scale("bad", "?", 10, 0, 1)])
 
 
 def test_sessions_work_with_the_communication_channel(tmp_path):

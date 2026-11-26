@@ -25,6 +25,8 @@ ARROW_KEYS = {pygame.K_UP: UP, pygame.K_DOWN: DOWN, pygame.K_LEFT: LEFT, pygame.
 WASD_KEYS = {pygame.K_w: UP, pygame.K_s: DOWN, pygame.K_a: LEFT, pygame.K_d: RIGHT, pygame.K_SPACE: STILL}
 """W/A/S/D move, Space stays."""
 
+_RESET = object()  # returned by _collect_actions when reset_board() was requested
+
 
 @dataclass
 class Button:
@@ -78,12 +80,15 @@ class HumanSession:
             ``pygame.event.get``); scripted tests replace it.
         pause_key: key that pauses and resumes (default P).
         quit_key: key that ends the session (default Escape).
+        keys: ``{pygame_key: callback}`` extra key bindings; ``callback(session)`` runs when the
+            key is pressed (also while paused), like a button. For example
+            ``{pygame.K_r: lambda s: s.reset_board()}``.
     """
 
     def __init__(self, env, humans=None, teammates=None, teams=None, initial_team=None, buttons=(),
                  pause_button=True, info=None, log=None, step_interval=None, turn_timeout=None, gui_config=None,
                  info_lines=2, fps=30, headless=False, event_source=None, pause_key=pygame.K_p,
-                 quit_key=pygame.K_ESCAPE):
+                 quit_key=pygame.K_ESCAPE, keys=None):
         self.env = env
         self.base = env.unwrapped
         self.humans = dict(humans or {})
@@ -97,6 +102,11 @@ class HumanSession:
         self.event_source = event_source or pygame.event.get
         self.pause_key = pause_key
         self.quit_key = quit_key
+        self.keys = dict(keys or {})
+        reserved = {quit_key, pause_key}.union(*(set(key_map) for key_map in self.humans.values()))
+        clashes = sorted(pygame.key.name(k) for k in set(self.keys) & reserved if k is not None)
+        if clashes:
+            raise ValueError(f"keys {clashes} are already used for quitting, pausing or moving")
         if step_interval is None and not self.humans:
             step_interval = 0.2
         self.step_interval = step_interval
@@ -125,7 +135,11 @@ class HumanSession:
         self.paused = False
         self.quit_requested = False
         self.last_infos = {}
+        self.last_rewards = {}
         self._end_reason = None
+        self._episode_started = None
+        self._reset_requested = False
+        self._disabled_buttons = set()
         self._t0 = time.perf_counter()
         self._clock = pygame.time.Clock()
         self._pending_events = []
@@ -213,6 +227,38 @@ class HumanSession:
         self.paused = not self.paused
         self.log_event("pause" if self.paused else "resume")
 
+    def pause(self):
+        """Hold the game: frames keep drawing and buttons keep working, but nothing steps."""
+        if not self.paused:
+            self.toggle_pause()
+
+    def resume(self):
+        """Continue after ``pause()`` or ``run_episode(start_paused=True)``."""
+        if self.paused:
+            self.toggle_pause()
+
+    def set_button_enabled(self, label, enabled=True):
+        """Grey out (or restore) a button; presses of a disabled button are ignored."""
+        if label not in self._buttons_by_label:
+            raise ValueError(f"unknown button {label!r}")
+        if enabled:
+            self._disabled_buttons.discard(label)
+        else:
+            self._disabled_buttons.add(label)
+        widget = getattr(self.renderer, "buttons", {}).get(label)
+        if widget is not None:
+            widget.enable() if enabled else widget.disable()
+
+    def reset_board(self):
+        """Reset the environment without starting a new episode.
+
+        Agents and prey (and entities without a fixed position) are placed again. The
+        episode, step count, score and captures carry on. The environment's own reset
+        rules apply, so a stock environment also re-draws state such as toxicity. Takes
+        effect before the next step; logged as a ``reset_board`` event.
+        """
+        self._reset_requested = True
+
     def end_episode(self, reason="skipped"):
         """End the current episode after this frame (for example from a Skip button)."""
         self._end_reason = reason
@@ -224,13 +270,18 @@ class HumanSession:
         self.log_event("quit")
 
     def log_event(self, name, **data):
-        """Write an event record (if logging) tagged with the current episode and step."""
+        """Write an event record (if logging) tagged with the current episode and step.
+
+        ``episode_t`` is the time in seconds since the episode started (None before the first
+        episode), so the time from an episode appearing to a button press can be read directly.
+        """
         if self.log is not None:
-            self.log.write("event", name=name, episode=self.episode, step=self.step, **data)
+            episode_t = None if self._episode_started is None else round(self.now() - self._episode_started, 3)
+            self.log.write("event", name=name, episode=self.episode, step=self.step, episode_t=episode_t, **data)
 
     # ------------------------------------------------------------- episodes
 
-    def run_episode(self, seed=None, max_steps=None, stop_when=None, **fields):
+    def run_episode(self, seed=None, max_steps=None, stop_when=None, start_paused=False, **fields):
         """Play one episode and return an ``EpisodeResult``.
 
         Args:
@@ -238,6 +289,8 @@ class HumanSession:
             max_steps: end after this many steps (the environment's own limit still applies).
             stop_when: ``callable(session) -> bool`` checked after every step, for example
                 ``lambda s: s.captures >= 50``.
+            start_paused: show the episode but hold it until ``resume()`` is called (for
+                example from a button), such as when participants rate the situation first.
             **fields: extra values stored in the episode's log records (for example a condition).
         """
         if self.quit_requested:
@@ -245,18 +298,28 @@ class HumanSession:
         observations, infos = self.env.reset(seed=seed)
         self.episode += 1
         self.step, self.team_return, self.captures = 0, 0.0, 0
-        self.paused, self._end_reason, self.last_infos = False, None, infos
+        self.paused, self._end_reason, self.last_infos, self.last_rewards = False, None, infos, {}
+        self._reset_requested = False
         for policy in self._all_policies():
             if hasattr(policy, "reset"):
                 policy.reset()
         started = self.now()
+        self._episode_started = started
         if self.log is not None:
             self.log.write("episode_start", episode=self.episode, seed=seed, team=self.active_team,
                            entities=self._entities(), **fields)
             self.log.metadata["episodes"].append({"episode": self.episode, "seed": seed, **fields})
+        if start_paused:
+            self.pause()
 
         while self.env.agents and self._end_reason is None:
             choice = self._collect_actions(observations)
+            if choice is _RESET:
+                observations, infos = self.env.reset()
+                self._reset_requested = False
+                self.last_infos = infos
+                self.log_event("reset_board", positions=self._positions(), entities=self._entities())
+                continue
             if choice is None:
                 break
             actions, sources, reaction_ms = choice
@@ -267,6 +330,7 @@ class HumanSession:
             self.team_return += team_reward
             self.captures += len(captures)
             self.last_infos = infos
+            self.last_rewards = rewards
             if self.log is not None:
                 record = {
                     "episode": self.episode,
@@ -365,6 +429,8 @@ class HumanSession:
                 self._handle(event, chosen, reaction_ms, shown)
             if self._end_reason is not None:
                 return None
+            if self._reset_requested:
+                return _RESET
             if self.paused:
                 self._tick()
                 self._draw()
@@ -402,6 +468,9 @@ class HumanSession:
                 self.quit()
             elif event.key == self.pause_key:
                 self.toggle_pause()
+            elif event.key in self.keys:
+                self.log_event("key", key=pygame.key.name(event.key))
+                self.keys[event.key](self)
             elif not self.paused:
                 for agent, key_map in self.humans.items():
                     if event.key in key_map:
@@ -415,7 +484,9 @@ class HumanSession:
                                        accepted=first or self.step_interval is not None)
         elif event.type == pygame_gui.UI_BUTTON_PRESSED:
             button = self._buttons_by_label.get(getattr(event.ui_element, "text", None))
-            if button is not None:
+            if button is not None and button.label in self._disabled_buttons:
+                self.log_event("button", label=button.label, accepted=False)
+            elif button is not None:
                 self.log_event("button", label=button.label)
                 button.on_press(self)
 

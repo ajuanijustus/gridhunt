@@ -215,6 +215,7 @@ class Renderer:
     def _setup_info_bar(self) -> None:
         """Initialize UI manager and create buttons/dropdowns for the info bar."""
         self._ui_manager = pygame_gui.UIManager(self._screen_size)
+        self.buttons = {}  # label -> UIButton
 
         # Use pre-calculated layout
         layout = self._layout or {}
@@ -243,7 +244,7 @@ class Renderer:
             rect = pygame.Rect(x_offset, button_y, button_width, self.BUTTON_HEIGHT)
             rect.top += self._info_bar_y
 
-            pygame_gui.elements.UIButton(
+            self.buttons[text] = pygame_gui.elements.UIButton(
                 relative_rect=rect, text=text, manager=self._ui_manager
             )
 

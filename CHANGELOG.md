@@ -23,8 +23,12 @@ First public release.
 - `gridhunt.hat`, a human-agent teaming toolkit: `HumanSession` (keyboard control with reaction
   times, AI teammates, team-switching and custom buttons, pausing, timers or turn-based steps),
   `SessionLog` (JSON Lines per participant session plus metadata) and `Questionnaire` (Likert,
-  choice, free text and instruction screens). Examples for a human-in-the-loop game and a
+  slider, choice, free text and instruction screens). Examples for a human-in-the-loop game and a
   human-on-the-loop policy delegation study.
+- `HumanSession`: episodes that start paused until a button resumes them (`start_paused`),
+  `pause()`/`resume()`, extra key bindings (`keys`), `reset_board()` to place everyone again
+  mid-episode, `set_button_enabled()` and `last_rewards`. Every logged event carries `episode_t`, the time since
+  its episode started. `Scale` questionnaire items for 0-100 style ratings.
 - `gridhunt.policies`: the scripted policies, usable as teammates; `GreedyPolicy` can be limited
   to some prey types and told to ignore hidden information (`prey_types`, `avoid_harmful`).
 - `gridhunt.zoo`: the benchmark's trained IPPO, MAPPO and HAPPO teams (median and best seed per

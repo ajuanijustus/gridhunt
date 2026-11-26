@@ -31,6 +31,9 @@ A policy is called as `policy(observation, agent_id, env)` and returns an action
 Pausing (the `P` key or the Pause button) stops the game; reaction times exclude the pause.
 `Escape` or closing the window ends the session (`session.quit_requested` becomes true).
 
+Other keys can be bound with `keys={pygame_key: callback}`; `callback(session)` runs when the key is
+pressed, also while paused. Keys already used for moving, pausing or quitting are refused.
+
 ## Supervising: teams and buttons
 
 ```python
@@ -57,14 +60,19 @@ episodes) a session can:
 | Method | Effect |
 |---|---|
 | `set_team(name)` | put a team in control from the next step |
-| `toggle_pause()` | pause or resume |
+| `pause()`, `resume()`, `toggle_pause()` | hold or continue the game (buttons and keys keep working) |
+| `set_button_enabled(label, enabled)` | grey out or restore a button; presses of a disabled one are ignored |
+| `reset_board()` | place agents and prey again without starting a new episode (step count and score carry on) |
 | `end_episode(reason)` | end the current episode |
 | `quit()` | end the episode and the session |
 | `log_event(name, **data)` | write a custom event to the log |
 
 Callbacks and the `info` text function can read `session.episode`, `session.step`,
-`session.team_return`, `session.captures`, `session.active_team`, `session.paused` and
-`session.last_infos`.
+`session.team_return`, `session.captures`, `session.active_team`, `session.paused`,
+`session.last_rewards` and `session.last_infos` (the last step's rewards and infos).
+
+`stop_when(session)` runs after every step, so it is also the place for per-step bookkeeping, such
+as updating a score that carries across episodes.
 
 ## Episodes
 
@@ -75,6 +83,8 @@ result = session.run_episode(seed=0, max_steps=300, stop_when=lambda s: s.captur
 
 - `max_steps` ends the episode early (the environment's own limit still applies);
 - `stop_when(session)` is checked after every step;
+- `start_paused=True` shows the board but holds it until `resume()` is called, for example from a
+  button the participant uses to rate the situation first;
 - extra keyword arguments (here `condition`) are stored in the episode's log records.
 
 It returns an `EpisodeResult` with the steps, team return, captures, how it ended

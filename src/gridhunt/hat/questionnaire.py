@@ -6,6 +6,7 @@ Build a ``Questionnaire`` from items and pass it to ``HumanSession.ask``::
         Message("Please answer a few questions about the last round."),
         Likert("trust", "I trusted the AI teammates.", points=7,
                anchors=("Strongly disagree", "Strongly agree")),
+        Scale("effort", "How hard did you have to work?", 0, 100, 5),
         Choice("strategy", "Which team did you rely on most?", ["Stag team", "Hare team"]),
         Text("comments", "Any comments?", required=False),
     ])
@@ -42,6 +43,32 @@ class Likert:
 
 
 @dataclass
+class Scale:
+    """A point on a slider from ``low`` to ``high`` in steps of ``step`` (answer: the value).
+
+    For visual analogue and NASA-TLX style ratings, e.g. ``Scale("mental", "How mentally
+    demanding was the task?", 0, 100, 5, anchors=("Very low", "Very high"))``. The handle
+    starts in the middle and the button only works once it has been moved, so no answer is
+    recorded by default. ``show_value`` displays the number next to the slider.
+    """
+
+    id: str
+    prompt: str
+    low: float = 0
+    high: float = 100
+    step: float = 5
+    anchors: tuple = ("Very low", "Very high")
+    button: str = "Next"
+    show_value: bool = False
+
+    def snap(self, value):
+        """The nearest allowed value (an int when low and step are whole numbers)."""
+        steps = round((value - self.low) / self.step)
+        snapped = min(max(self.low + steps * self.step, self.low), self.high)
+        return int(round(snapped)) if float(self.low).is_integer() and float(self.step).is_integer() else snapped
+
+
+@dataclass
 class Choice:
     """One option out of several (answer: the option text)."""
 
@@ -65,7 +92,7 @@ class QuitRequested(Exception):
 
 
 class Questionnaire:
-    """An ordered list of items: ``Message``, ``Likert``, ``Choice``, ``Text``.
+    """An ordered list of items: ``Message``, ``Likert``, ``Scale``, ``Choice``, ``Text``.
 
     Args:
         items: the items, shown in order.
@@ -98,6 +125,10 @@ class Questionnaire:
                 raise ValueError(f"{item.id}: a Likert item needs at least 2 points")
             if isinstance(item, Choice) and not item.options:
                 raise ValueError(f"{item.id}: a Choice item needs options")
+            if isinstance(item, Scale):
+                span = (item.high - item.low) / item.step if item.step > 0 else 0
+                if item.high <= item.low or item.step <= 0 or abs(span - round(span)) > 1e-9:
+                    raise ValueError(f"{item.id}: a Scale needs low < high and a step that divides high - low")
         # Widgets of the item on screen ({"buttons": {label: element}, "entry": element}),
         # exposed so scripted tests can press them
         self.current_widgets = {}
@@ -156,6 +187,32 @@ class Questionnaire:
                 for text, centre in ((low, x + size_ // 2), (high, x + total - size_ // 2)):
                     left = min(max(self.MARGIN, centre - label_width // 2), self.MARGIN + inner - label_width)
                     pygame_gui.elements.UILabel(pygame.Rect(left, y, label_width, 28), text, manager)
+        elif isinstance(item, Scale):
+            value_width = 70 if item.show_value else 0
+            start = item.snap((item.low + item.high) / 2)
+            slider = pygame_gui.elements.UIHorizontalSlider(
+                pygame.Rect(self.MARGIN, y, inner - value_width, self.BUTTON_HEIGHT), start,
+                (item.low, item.high), manager, click_increment=item.step,
+            )
+            self.current_widgets.update(slider=slider, start=start, moved=False, value_label=None)
+            if item.show_value:
+                self.current_widgets["value_label"] = pygame_gui.elements.UILabel(
+                    pygame.Rect(self.MARGIN + inner - value_width + 8, y, value_width - 8, self.BUTTON_HEIGHT),
+                    str(start), manager,
+                )
+            y += self.BUTTON_HEIGHT + 6
+            if item.anchors:
+                label_width = min(inner // 2, 240)
+                low, high = item.anchors
+                pygame_gui.elements.UILabel(pygame.Rect(self.MARGIN, y, label_width, 28), low, manager)
+                pygame_gui.elements.UILabel(
+                    pygame.Rect(self.MARGIN + inner - value_width - label_width, y, label_width, 28), high, manager
+                )
+            y += 40
+            buttons[item.button] = pygame_gui.elements.UIButton(
+                pygame.Rect(self.MARGIN + inner - 140, y, 140, self.BUTTON_HEIGHT), item.button, manager
+            )
+            buttons[item.button].disable()  # until the handle has been moved
         elif isinstance(item, Choice):
             for option in item.options:
                 buttons[option] = pygame_gui.elements.UIButton(
@@ -181,6 +238,10 @@ class Questionnaire:
             return int(label)
         if isinstance(item, Choice):
             return label
+        if isinstance(item, Scale):
+            if not self.current_widgets["moved"]:
+                return None
+            return item.snap(self.current_widgets["slider"].get_current_value())
         if isinstance(item, Text):
             text = self.current_widgets["entry"].get_text().strip()
             if item.required and not text:
@@ -210,7 +271,19 @@ class Questionnaire:
                     answer = self._answer_for(item, label)
                     if answer is not None:
                         return answer
+            if isinstance(item, Scale):
+                self._track_scale(item)
             self._draw(manager, screen, delta, show)
+
+    def _track_scale(self, item):
+        """Enable the button once the handle has moved, and keep the value label current."""
+        widgets = self.current_widgets
+        value = item.snap(widgets["slider"].get_current_value())
+        if not widgets["moved"] and value != widgets["start"]:
+            widgets["moved"] = True
+            widgets["buttons"][item.button].enable()
+        if widgets["value_label"] is not None:
+            widgets["value_label"].set_text(str(value))
 
     def _draw(self, manager, screen, delta, show):
         manager.update(delta)
