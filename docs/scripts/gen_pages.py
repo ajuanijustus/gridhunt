@@ -43,7 +43,8 @@ SCENARIOS = {
         "summary": (
             "Three hunters on a 7×7 grid. Every time the stag appears it is toxic with probability 0.5: a "
             "healthy stag is worth 5 and a toxic one costs 5, and a toxic stag left alone for 5 steps "
-            "reappears elsewhere with its toxicity drawn again. Only `predator_0` can tell whether the "
+            "reappears elsewhere with its toxicity drawn again (`ToxicStag(toxic_lifetime=...)` changes or "
+            "randomizes this; a fixed lifetime lets agents infer that a stag which stays longer is healthy). Only `predator_0` can tell whether the "
             "stag is toxic, and it sees only the cells next to it, so the team has to act on one member's "
             "private information."
         ),
@@ -91,9 +92,13 @@ SCENARIOS = {
         "env_id": "GridHunt-LandAndSea-v0",
         "title": "Land and sea",
         "summary": (
-            "A 10×10 grid split into sea and land along an irregular shore. One hunter is confined to land "
-            "and the other to sea; either can catch the bird, which reappears on a random cell after every "
-            "capture, so the hunter on the right side of the shore has to go for it."
+            "A 10×10 grid split into sea and land along an irregular shore. The land hunter can never "
+            "enter the sea and the boat can never come ashore. Either can catch the bird alone, and it "
+            "reappears on a random cell after every capture, so whoever is on its side of the shore has to "
+            "go for it while the other waits for the next one. It tests division of labour by territory: "
+            "neither hunter can cover for the other, and a bird on a missing hunter's side is never caught "
+            "(removing either hunter loses over 96% of the score; see the interdependence ablation in the "
+            "benchmark results). Where the off-side hunter waits is the room for anticipation."
         ),
     },
     "swarm": {
@@ -126,6 +131,12 @@ def _prey_notes(prey):
     notes = []
     if hasattr(prey, "toxic_probability"):
         notes.append(f"toxic with probability {prey.toxic_probability} (then worth -{abs(prey.reward)})")
+        lifetime = prey.toxic_lifetime
+        if lifetime is None:
+            notes.append("a toxic stag stays until caught")
+        else:
+            span = f"{lifetime[0]}-{lifetime[1]}" if isinstance(lifetime, tuple) else str(lifetime)
+            notes.append(f"an uncaught toxic stag moves after {span} steps")
     if prey.status.get("trap_probability"):
         notes.append(f"trapped with probability {prey.status['trap_probability']} "
                      f"(team penalty {prey.status['trap_penalty']})")

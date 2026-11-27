@@ -423,6 +423,7 @@ class HumanSession:
         """Wait for the humans (or the timer), then return (actions, sources, reaction_ms)."""
         chosen, reaction_ms = {}, {agent: None for agent in self.humans}
         self._draw()
+        self._discard_early_keys()
         shown = self.now()  # reaction times run from the frame appearing
         while True:
             for event in self._events():
@@ -489,6 +490,25 @@ class HumanSession:
             elif button is not None:
                 self.log_event("button", label=button.label)
                 button.on_press(self)
+
+    def _discard_early_keys(self):
+        """Drop movement keys pressed before this frame appeared, such as the second key of a quick
+        double press on the last turn, so they never count as a response to it. They are logged as
+        ``key`` events with ``accepted=False, early=True``. Quit, pause and custom keys still work.
+
+        Scripted event sources hand over each frame's events on request, so only real input has a
+        backlog to clear.
+        """
+        if self.event_source is not pygame.event.get:
+            return
+        for event in pygame.event.get(pygame.KEYDOWN):
+            agent = next((a for a, key_map in self.humans.items() if event.key in key_map), None)
+            reserved = event.key in (self.quit_key, self.pause_key) or event.key in self.keys
+            if agent is None or reserved or self.paused:
+                self._handle(event, {}, {}, None)
+            else:
+                self.log_event("key", agent=agent, key=pygame.key.name(event.key),
+                               action=self.humans[agent][event.key], accepted=False, early=True)
 
     def _events(self):
         events = list(self.event_source())

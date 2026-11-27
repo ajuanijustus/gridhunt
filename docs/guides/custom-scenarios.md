@@ -38,13 +38,20 @@ observations, infos = env.reset(seed=0)
 | `render_sprite` | the image drawn for it (`gridhunt.assets` has several) |
 
 **Prey** classes: `Stag` (worth 5, needs capture power 2), `Hare` (worth 1, power 1, crowding costs
-0.5), `ToxicStag` (worth 5, or -5 when toxic), `Building` (Raid's targets, with trap probability and
+0.5), `ToxicStag` (worth 5, or -5 when toxic; an uncaught toxic stag moves after `toxic_lifetime`
+steps, see below), `Building` (Raid's targets, with trap probability and
 penalty, never reappear) and `Pig`. The base class `Prey` takes every setting directly: `reward`,
 `capture_power_required`, `respawn`, `overcrowding_penalty`, `speed` and more.
 
 A capture happens when the predators on a prey's cell together have at least the capture power it
 needs. With more than needed, the prey's overcrowding penalty is subtracted from its reward.
 Prey with `respawn=True` reappear on a random free cell.
+
+`ToxicStag(toxic_lifetime=...)` sets how long an uncaught toxic stag stays before it moves to a
+random cell with its toxicity drawn again: an int (5 in the benchmark), a `(low, high)` range drawn
+from each time the stag turns toxic, or `None` to keep it until it is caught. A fixed lifetime is a
+cue in itself: a stag that has stayed longer than that must be healthy, so agents without the
+toxicity flag can infer it. A range or `None` removes that cue.
 
 Prey stay still unless `prey_motion` is `"random"` or `"flee"` (away from the nearest predator);
 `prey_move_probability` sets how often they move.

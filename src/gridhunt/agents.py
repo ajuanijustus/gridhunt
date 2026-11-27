@@ -150,7 +150,17 @@ class Hare(Prey):
 
 
 class ToxicStag(Prey):
-    """Stag variant with toxic/healthy respawn state."""
+    """Stag variant with toxic/healthy respawn state.
+
+    Each time it appears the stag is toxic with probability ``toxic_probability``. A toxic stag
+    that nobody catches moves to a random cell after ``toxic_lifetime`` steps, with its toxicity
+    drawn again; a healthy one stays until it is caught.
+
+    toxic_lifetime: steps a toxic stag stays put. An int (the benchmark uses 5), a ``(low, high)``
+        pair to draw it uniformly from that range each time the stag turns toxic, or ``None`` for a
+        toxic stag that stays until it is caught. A fixed lifetime is a cue in itself: a stag that
+        has stayed longer than that must be healthy, so agents without the toxicity flag can infer it.
+    """
 
     def __init__(
         self,
@@ -158,6 +168,7 @@ class ToxicStag(Prey):
         position=None,
         toxic_probability=0.5,
         toxic_render_sprite=TOXIC_STAG_SPRITE,
+        toxic_lifetime=5,
     ):
         super().__init__(
             prey_id=prey_id,
@@ -172,8 +183,10 @@ class ToxicStag(Prey):
         self.toxic_probability = toxic_probability
         # Sprite shown while toxic; pass STAG_SPRITE to hide toxicity from viewers
         self.toxic_render_sprite = toxic_render_sprite
+        self.toxic_lifetime = _check_lifetime(toxic_lifetime)
         # Healthy until the environment draws the toxicity from its own seeded RNG on reset
         self.toxic_turns_alive = 0
+        self.current_toxic_lifetime = None
 
     def _reroll_disease_status(self, rng):
         """Re-draw toxicity with the environment's seeded generator."""
@@ -181,15 +194,35 @@ class ToxicStag(Prey):
             self.status["toxic"] = True
             self.render_sprite = self.toxic_render_sprite
             self.reward = -5
+            # A fixed lifetime draws nothing, so the benchmark's random stream is unchanged
+            if isinstance(self.toxic_lifetime, tuple):
+                low, high = self.toxic_lifetime
+                draw = rng.integers if hasattr(rng, "integers") else rng.randint  # Generator or RandomState
+                self.current_toxic_lifetime = int(draw(low, high + 1))
+            else:
+                self.current_toxic_lifetime = self.toxic_lifetime
         else:
             self.status.pop("toxic", None)
             self.render_sprite = STAG_SPRITE
             self.reward = 5
+            self.current_toxic_lifetime = None
         self.toxic_turns_alive = 0
 
     def execute_respawn(self, env):
         self._reroll_disease_status(env._np_rng)
         self.position = env._find_random_valid_coord()
+
+
+def _check_lifetime(value):
+    if value is None:
+        return None
+    if isinstance(value, (tuple, list)):
+        if len(value) == 2 and all(isinstance(v, int) and not isinstance(v, bool) for v in value) \
+                and 1 <= value[0] <= value[1]:
+            return (value[0], value[1])
+    elif isinstance(value, int) and not isinstance(value, bool) and value >= 1:
+        return value
+    raise ValueError(f"toxic_lifetime must be a positive int, a (low, high) pair of them or None, not {value!r}")
 
 
 class Building(Prey):

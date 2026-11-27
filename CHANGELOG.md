@@ -29,6 +29,10 @@ First public release.
   `pause()`/`resume()`, extra key bindings (`keys`), `reset_board()` to place everyone again
   mid-episode, `set_button_enabled()` and `last_rewards`. Every logged event carries `episode_t`, the time since
   its episode started. `Scale` questionnaire items for 0-100 style ratings.
+- `ToxicStag(toxic_lifetime=...)`: how long an uncaught toxic stag stays before it moves, as a
+  fixed number of steps (5, the benchmark's value and the default), a random range or `None`.
+  A fixed lifetime lets agents infer that a stag which stays longer is healthy; a range removes
+  that cue.
 - `gridhunt.policies`: the scripted policies, usable as teammates; `GreedyPolicy` can be limited
   to some prey types and told to ignore hidden information (`prey_types`, `avoid_harmful`).
 - `gridhunt.zoo`: the benchmark's trained IPPO, MAPPO and HAPPO teams (median and best seed per
@@ -72,6 +76,9 @@ First public release.
 - Action masks ignored an agent's own terrain restrictions, terrain immunity and speed, and the
   terrain setting `restricted_to` affected only masks, not movement. Movement and masks now
   follow one set of rules, and `env.action_mask(agent_id)` returns an agent's mask.
+- `HumanSession`: a move key pressed before a frame appeared, such as the second key of a quick
+  double press, was applied to the next turn with a near-zero reaction time. Such keys are now
+  discarded and logged as early.
 - `CommunicationWrapper.unwrapped` returned the wrapper instead of the environment underneath.
 - `env.render()` raised `NotImplementedError`, and `render_mode="rgb_array"` was accepted but
   drew nothing.

@@ -496,3 +496,36 @@ def test_examples_run_end_to_end(example, tmp_path):
     types = [r["type"] for r in read_log(logs[0])]
     assert types[0] == "session_start" and types[-1] == "session_end"
     assert types.count("episode_end") >= 2 and "questionnaire" in types and "step" in types
+
+
+def test_a_key_pressed_before_the_frame_appears_is_discarded(tmp_path):
+    """A quick double press: the second key lands after the first ended the turn. It must not move
+    the agent on the next turn with a near-zero reaction time; it is logged as early instead."""
+    env = gridhunt.make("GridHunt-ClassicStag-v0")
+    log = SessionLog(tmp_path, participant="P01", condition="double_press")
+
+    def teammate(observation, agent_id, env):
+        # Runs once the human's turn is over, so this press arrives between frames
+        pygame.event.post(key(pygame.K_LEFT))
+        return STILL
+
+    session = HumanSession(env, humans={"predator_0": ARROW_KEYS}, teammates={"predator_1": teammate},
+                           turn_timeout=1.0, log=log, headless=True)
+    pressed, tick = set(), session._tick
+
+    def press_right_once_the_frame_is_up():
+        if session.step not in pressed:
+            pressed.add(session.step)
+            pygame.event.post(key(pygame.K_RIGHT))
+        tick()
+
+    session._tick = press_right_once_the_frame_is_up
+    pygame.event.clear()
+    session.run_episode(seed=3, max_steps=3)
+    session.close()
+
+    steps = records(log, "step")
+    assert [s["actions"]["predator_0"] for s in steps] == [RIGHT] * 3
+    assert all(s["sources"]["predator_0"] == "human" for s in steps)
+    early = [e for e in records(log, "event") if e["name"] == "key" and e.get("early")]
+    assert [e["key"] for e in early] == ["left", "left"] and all(e["accepted"] is False for e in early)

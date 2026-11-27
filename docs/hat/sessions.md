@@ -28,6 +28,11 @@ A policy is called as `policy(observation, agent_id, env)` and returns an action
   on a timer. A human's latest key press within the interval is used, and a human who pressed
   nothing stays still (source `"none"`).
 
+In both modes a move key pressed before the current frame appeared (for example the second key of
+a quick double press, landing just after the first one ended the turn) is not applied to the new
+frame: it is logged as a `key` event with `accepted: false, early: true`. Quit, pause and custom
+keys still take effect.
+
 Pausing (the `P` key or the Pause button) stops the game; reaction times exclude the pause.
 `Escape` or closing the window ends the session (`session.quit_requested` becomes true).
 

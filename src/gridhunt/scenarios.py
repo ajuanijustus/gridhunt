@@ -42,15 +42,16 @@ class ToxicStagHuntScenario(GridHunt):
         return observations, rewards, terminations, truncations, infos
 
     def _age_toxic_prey(self):
-        """Respawn toxic stags that have been alive for 5 steps."""
+        """Respawn toxic stags that have stayed for their lifetime (5 steps in the benchmark)."""
         for prey_item in list(self.prey.values()):
-            if isinstance(prey_item, ToxicStag) and prey_item.status.get(
-                "toxic", False
-            ):
-                prey_item.toxic_turns_alive += 1
-                if prey_item.toxic_turns_alive >= 5:
-                    prey_item.execute_respawn(self)
-                    prey_item.toxic_turns_alive = 0
+            if not isinstance(prey_item, ToxicStag) or not prey_item.status.get("toxic", False):
+                continue
+            if prey_item.current_toxic_lifetime is None:
+                continue
+            prey_item.toxic_turns_alive += 1
+            if prey_item.toxic_turns_alive >= prey_item.current_toxic_lifetime:
+                prey_item.execute_respawn(self)
+                prey_item.toxic_turns_alive = 0
 
     def observation_space(self, agent):
         if self.observation_mode != "toxic":

@@ -26,7 +26,7 @@ durations and for aligning with other recordings) and `wall_time` (Unix time).
 | `session_start` | `env` (id, class, grid size, agents, observation and reward mode, episode length), `humans`, `teammates`, `teams`, `buttons`, `step_interval`, `turn_timeout` |
 | `episode_start` | `episode`, `seed`, `team` in control, `entities` (each human-only cue's position and image), and any fields passed to `run_episode` |
 | `step` | `episode`, `step`, `actions`, `sources`, `reaction_ms`, `team`, `rewards`, `team_reward`, `captures`, `terminations`, `truncations`, `positions` of every agent and prey, and `state` (`env.state()`, unless `log_state=False`) |
-| `event` | `name`, `episode`, `step`, `episode_t` (seconds since the episode started) and its data: `key` (`agent`, `key`, `action`, `accepted`, or just `key` for a `keys` binding), `button` (`label`; `accepted: false` when disabled), `team_switch` (`team`, `previous`), `pause`, `resume`, `reset_board` (`positions`, `entities`), `quit`, or your own from `log_event` |
+| `event` | `name`, `episode`, `step`, `episode_t` (seconds since the episode started) and its data: `key` (`agent`, `key`, `action`, `accepted`, plus `early: true` for a key pressed before the frame appeared, or just `key` for a `keys` binding), `button` (`label`; `accepted: false` when disabled), `team_switch` (`team`, `previous`), `pause`, `resume`, `reset_board` (`positions`, `entities`), `quit`, or your own from `log_event` |
 | `questionnaire` | `id`, `episode`, `answers`, `response_ms` per item |
 | `episode_end` | `episode`, `seed`, `steps`, `team_return`, `captures`, `end_reason`, `duration_s` |
 | `session_end` | `episodes`, `quit` |
